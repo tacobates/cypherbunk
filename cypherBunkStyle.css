@@ -1,0 +1,114 @@
+/*** Color Palette (#Base #Light #Dark):
+  Yellow #d4cd08 #f2ea00 #e6de00 (darkest: #d6c100)
+  Black #1d1d1d #2f2f2f #0f0f0f (darkest: #000)
+  Blue #1fa5ff #57bbff #008ff0 (darkest: 0068f0, 0011d1)
+  Cyan: #0dffff #85ffff #00e3e3 (darkest: 00baba)
+  Red: #c70d00 #ff0000 #a80000
+  Purple: #5600b3 #? #6300a6
+  Orange: #ffae00 #ffc64d #ff9100 (darkest: e68300 cc7000)
+  Green: #00ff44 #3bff6f #00ba32
+***/
+html {
+  background: linear-gradient(90deg, #f2ea00 75%, #d4cd08 75%), #f2ea00;
+  color:#0f0f0f;
+  padding:10px;
+}
+html.dark {
+  background: linear-gradient(90deg, #1d1d1d 75%, #0f0f0f 75%), #1d1d1d;
+  color:#f2ea00;
+}
+html.dark a { color:#008ff0; }
+html.dark input, html.dark textarea { background-color:#0f0f0f; color:#3bff6f; }
+body { padding:0px; margin:0px; width:100%;}
+h2 { margin-bottom:0px; }
+
+#content button {
+  background-color:#0011d1; /*Dark Blue default*/
+  border:solid 2px transparent;
+  border-left:solid 4px #00baba; 
+  border-top:solid 2px #85ffff; 
+  cursor:pointer;
+  font-size:115%;
+  font-variant:small-caps;
+  height:45px;
+  margin:2px;
+  padding:0px 20px 0px 15px;
+
+  /*Pink Neon Text Color*/
+  color:#fbd6ff;
+  text-shadow:
+    1px 1px #2f2f2f,
+    0 0 5px #ed92f7,
+    0 0 10px #e600ff,
+    0 0 20px #b800cc,
+    0 0 30px #b800cc;
+
+  /*Chop Off Bottom Right Corner*/
+  clip-path:polygon(
+    0px 0px, /*Top Left*/
+    100% 0px, /*Top Right*/
+    100% 50%, /*Just Above Bottom Right*/
+    calc(100% - 25px) 100%, /*Just Left of Bottom Right*/
+    0px 100% /*Bottom Left*/
+  );
+}
+#content button.purple { background-color:#6300a6; }
+#content button.red { background-color:#c70d00; }
+#content button:hover {
+  border-color:#85ffff;
+  /*Brighter Neon*/
+  color:#fac9ff;
+  text-shadow:
+    0 0 1px #000,
+    1px 1px #000,
+    0 0 5px #ed92f7,
+    0 0 8px #b800cc,
+    0 0 9px #fff,
+    0 0 10px #e600ff,
+    0 0 20px #b800cc,
+    0 0 30px #b800cc;
+}
+
+#footer { position:fixed; left:0; bottom:0; width:100%; padding-left:10px;}
+#helpWrap { text-align:right; }
+#jsCard textarea { width:99%; height:400px; }
+#keyText { height:15px; width:200px; vertical-align:middle; }
+#keyUrl { width:80px; }
+#message { height:150px; width:100%; }
+#score_total { font-size:140%; font-weight:bold; text-align:center; }
+#warning { color:red; font-size:115%; font-weight:bold; }
+#version { float:right; margin-right:20px;}
+#undoWrap { float:right; }
+
+.card {
+  background-color:#1d1d1d;
+  color:#f2ea00;
+  padding:7px;
+  border:solid 5px #1fa5ff;
+  border-radius:10px;
+  position:absolute;
+  right:5px;
+  top:34px;
+  width:90%;
+}
+.card h3 { margin:0px 0px 5px 0px; }
+.card p { margin:10px 0px; padding:0px 15px; }
+.card p+h3 { border-top:solid 2px #0f0f0f; margin-top:10px; padding-top:5px; }
+.cardClose {
+  display:inline-block;
+  background-color:#a80000;
+  border:solid 1px #0f0f0f;
+  border-radius:4px;
+  color:#0f0f0f;
+  cursor:pointer;
+  float:right;
+  font-weight:bold;
+  font-size:125%;
+  padding:0px 5px;
+}
+.cardClose:hover { border-color:#ff0000; }
+.icon { color:#0053bf; cursor:pointer; height:24px; margin-left:10px; }
+html.dark .icon { color:#008ff0; }
+.icon:hover { color:#000; }
+html.dark .icon:hover { color:#d4cd08; }
+.invisible { display:none; }
