@@ -138,6 +138,7 @@ class CypherBunkUI {
       CypherBunkUI.showWarning(data.message);
     } else {
       _g.dom.message.value = CypherBunk2076.TAG_MESSAGE + "\n" + data.cypherText;
+      _g.dom.predefinedJS.value = _g.cypherbunk.precomputedJS; //Save for display in the JS card
     }
   }
 
