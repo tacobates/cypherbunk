@@ -114,14 +114,14 @@ class CypherBunk2076 {
     //CALC Key Diversity
     var desiredNum = 1000;
     var totalKeyVariants = 0;
-    for (var i=0; i < this.B64_ALPHABET.length; ++i) {
-      var c = this.B64_ALPHABET.charAt(i);
+    for (var i=0; i < CypherBunk2076.B64_ALPHABET.length; ++i) {
+      var c = CypherBunk2076.B64_ALPHABET.charAt(i);
       var tempVariants = this.hashEnc.get(c).length;
       if (tempVariants > desiredNum)
         tempVariants = desiredNum; //No Extra Credit (will throw off average)
       totalKeyVariants += tempVariants;
     }
-    rtn.avgKeyVariants = (totalKeyVariants / this.B64_ALPHABET.length);
+    rtn.avgKeyVariants = (totalKeyVariants / CypherBunk2076.B64_ALPHABET.length);
     rtn.variantScore = rtn.avgKeyVariants / desiredNum;
     scoreRunningTotal += rtn.variantScore;
     this.debug("Score Running Total: " + scoreRunningTotal, 2);
