@@ -104,10 +104,10 @@ class CypherBunk2076 {
     var scoreNumCategories = 4; //4 types of tests
 
     //CALC Key Length
-    var effectiveLen = this.key64.length > this.KEY_LEN_MAX ? this.KEY_LEN_MAX : this.key64.length;
-    rtn.scoreLen = effectiveLen / this.KEY_LEN_MAX;
+    var effectiveLen = this.key64.length > CypherBunk2076.KEY_LEN_MAX ? CypherBunk2076.KEY_LEN_MAX : this.key64.length;
+    rtn.scoreLen = effectiveLen / CypherBunk2076.KEY_LEN_MAX;
     rtn.userLen = effectiveLen;
-    var maxLen = this.KEY_LEN_MAX;
+    var maxLen = CypherBunk2076.KEY_LEN_MAX;
     scoreRunningTotal += rtn.scoreLen;
     this.debug("Score Running Total: " + scoreRunningTotal, 2);
 
