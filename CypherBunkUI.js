@@ -52,7 +52,7 @@ class CypherBunkUI {
     _g.dom.s3 = document.getElementById('score3');
     _g.dom.s4 = document.getElementById('score4');
 
-    document.getElementById("version").innerHTML = "version " + _g.cypherbunk.VERSION;
+    document.getElementById("version").innerHTML = "version " + CypherBunk2076.VERSION;
     //Make Close Icons for Popup Cards
     var cards = document.querySelectorAll(".card");
     for(var i=0; i < cards.length; ++i) {
