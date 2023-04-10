@@ -2,38 +2,1856 @@
 <html class="dark">
 <!-- ************************************************************************
 * This page is designed like old-school HTML intended to allow for easy
-* downloading and offline use.
-* You will need to download: index.html, CypherBunk2076.js, & CypherBunkUI.js
-*   - you need the 4 icon_*.svg images for the top right navigation
-*   - you will also need to link to jQuery.
-*   - keys.js is optional for pre-computed keys
-*   - asciiLogos.js is also optional (it just pre-populates the <textarea>)
-* If you want to use the library with your own UI, you only need:
-*   - CypherBunk2076.js
-*   - and jQuery (any version with $.ajax(), but I tested with v3.6.0)
+* downloading and offline use (a true single-page app with ZERO dependencies).
 * 
 * This is effectively a simple cypher encoder/decoder, but instead of a 1:1
 * mapping of text to cypher-text, the encoding is randomized across all
 * instances of each character across the cypher. So encrypting the same message
 * twice will NOT yield the same cyphertext, but both will decrypt correctly.
 *
-* This is *NOT* a strong encryption meant to replace AES/DES/RSA/etc...
+* This is *NOT* a strong encryption meant to replace AES/RSA/etc...
 * It *IS* meant to allow for ad-hoc encryption/decryption.
 *
+* Additionally, you can generate a CSV spreadsheet that is further obfuscated.
+* Since CyperBunk cyphertext is STRICTLY Numeric, non-numeric characters can be
+* added anywhere in the cyphertext with no adverse effect on decryption. I
+* leverage this to make a CSV that looks like it has all sorts of alphanumeric
+* data, yet its true message is only the numbers in the CSV.
+*
 * Click the Help icon for more details and a use case.
+*
+* Author: Cynic Placebo, April 2023
+* License: Do whatever you want, but please link to my site to give credit.
+* Site: www.localmess.com/cypherbunk
 ************************************************************************ -->
 
-<!-- TODO: make a CSV download option that auto-obfuscates the data to make it look like an inventory or other mundane spreadsheet (and allow for upload of that file instead of copy/paste to decrypt) -->
-
 <head>
-  <title>CypherBunk 2076 (Simple Encryption for Friends)</title>
-  <link rel="stylesheet" href="cypherBunkStyle.css">
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-  <!-- <script src="keys.js"></script> --> <!-- Link to Static Keys like this -->
-  <script src="asciiLogos.js"></script>
-  <script src="CypherBunk2076.js"></script>
-  <script src="CypherBunkUI.js"></script>
+  <title>CypherBunk 2076 (Ad-Hoc Encryption for Friends)</title>
+  <style type="text/css">
+/*************** CSS Boilerplate ***************/
+* { box-sizing:border-box; }
+html, body {
+  font-family:Verdana, Geneva, sans-serif;
+  margin:0px;
+  padding:0px;
+  min-height:100%;
+  text-rendering:optimizeLegibility;
+  width:100%;
+}
+table {
+  border-collapse:collapse;
+  margin:0px;
+  padding:0px;
+}
+
+
+/*************** CSS Variables ***************/
+:root {
+  /*White, Dark to Light*/
+  --cW1:#999999; --cW2:#bbbbbb; --cW3:#dddddd; --cW4:#ffffff;
+  /*Blacks, Dark to Light*/
+  --cB1:#000000; --cB2:#0f0f0f; --cB3:#1d1d1d; --cB4:#2f2f2f;
+  /*Purples, Dark to Light*/
+  --cP1:#250052; --cP2:#5600b3; --cP3:#6300a6;
+  /*Pinks, Dark to Light*/
+  --cPink1:#b800cc; --cPink2:#e600ff; --cPink3:#ed92f7; --cPink4:#fac9ff; --cPink5:#fbd6ff;
+  /*Reds, Dark to Light*/
+  --cR1:#a80000; --cR2:#c70d00; --cR3:#ff0000;
+  /*Oranges, Dark to Light*/
+  --cO1:#cc7000; --cO2:#e68300; --cO3:#ffae00; --cO4:#ffc64d; --cO5:#ff9100;
+  /*Yellows, Dark to Light*/
+  --cY1:#d4cd08; --cY2:#f2ea00; --cY3:#fffa59; --cY4:#fffc96;
+  /*Greens, Dark to Light*/
+  --cG1:#00ba32; --cG2:#00ff44; --cG3:#3bff6f;
+  /*Cyans, Dark to Light*/
+  --cC1:#00baba; --cC2:#00e3e3; --cC3:#0dffff; --cC4:#85ffff;
+  /*Blues, Dark to Light*/
+  --cBlue1:#0011d1; --cBlue2:#008ff0; --cBlue3:#1fa5ff; --cBlue4:#57bbff;
+}
+
+
+/*************** CSS Tags ***************/
+html {
+  background: linear-gradient(90deg, var(--cY2) 75%, var(--cY1) 75%), var(--cY2);
+  color:var(--cB2);
+  padding:10px;
+}
+html.dark {
+  background: linear-gradient(90deg, var(--cB3) 75%, var(--cB2) 75%), var(--cB3);
+  color:var(--cY2);
+}
+html.dark a { color:var(--cBlue2); }
+html.dark input, html.dark textarea { background-color:var(--cB2); color:var(--cG3); }
+body { padding:0px; margin:0px; width:100%;}
+h2 { margin-bottom:0px; }
+
+
+/*************** CSS IDs ***************/
+#content button {
+  background-color:var(--cBlue1); /*Dark Blue default*/
+  border:solid 2px transparent;
+  border-left:solid 4px var(--cC1); 
+  border-top:solid 2px var(--cC4); 
+  cursor:pointer;
+  font-size:115%;
+  font-variant:small-caps;
+  height:45px;
+  margin:2px;
+  padding:0px 20px 0px 15px;
+
+  /*Pink Neon Text Color*/
+  color:var(--cPink5);
+  text-shadow:
+    1px 1px var(--cB4),
+    0 0 5px var(--cPink3),
+    0 0 10px var(--cPink2),
+    0 0 20px var(--cPink1),
+    0 0 30px var(--cPink1);
+
+  /*Chop Off Bottom Right Corner*/
+  clip-path:polygon(
+    0px 0px, /*Top Left*/
+    100% 0px, /*Top Right*/
+    100% 50%, /*Just Above Bottom Right*/
+    calc(100% - 25px) 100%, /*Just Left of Bottom Right*/
+    0px 100% /*Bottom Left*/
+  );
+}
+#content button.purple { background-color:var(--cP3); }
+#content button.red { background-color:var(--cR2); }
+#content button:hover {
+  border-color:var(--cC4);
+  /*Brighter Neon*/
+  color:var(--cPink4);
+  text-shadow:
+    0 0 1px var(--cB1),
+    1px 1px var(--cB1),
+    0 0 5px var(--cPink3),
+    0 0 8px var(--cPink1),
+    0 0 9px var(--cW4),
+    0 0 10px var(--cPink2),
+    0 0 20px var(--cPink1),
+    0 0 30px var(--cPink1);
+}
+
+#csv, #message { height:250px; width:100%; }
+#cypherKey { height:90px; width:180px; vertical-align:middle; }
+#helpCard { color:var(--cW2); }
+#helpCard div:hover { background-color:var(--cB2); color:var(--cY2); }
+#footer {
+  position:fixed;
+  left:0;
+  bottom:0;
+  width:100%;
+
+  border-top:solid 1px var(--cB2);
+  padding:0px 0px 5px 10px;
+}
+.dark #footer { border-color:var(--cW1); }
+#helpWrap { text-align:right; white-space:nowrap; }
+#jsCard textarea { width:99%; height:400px; }
+#scoreCard { text-align:center; }
+#score_total {
+  border-bottom:solid 1px var(--cW1);
+  font-size:140%;
+  font-weight:bold;
+  margin-bottom:18px;
+  text-align:center;
+}
+#scoreCaveat {
+  border-top:solid 1px var(--cW1);
+  color:#aaaaaa;
+  margin-top:18px;
+  padding:5px;
+}
+#scoreTable {
+  border:solid 1px var(--cB1);
+  font-size:110%;
+  margin:auto;
+}
+#scoreTable td { padding:8px 12px; }
+#scoreTable th {
+  background-color:var(--cP2);
+  border-bottom:solid 1px var(--cB1);
+  padding:10px;
+}
+#scoreTable td+td, #scoreTable th+th { border-left: solid 1px var(--cB1); }
+#scoreTable tr { vertical-align:top; }
+#scoreTable tr:nth-child(even) { background-color:var(--cB1); }
+#topBar {
+  border-bottom:solid 1px var(--cB2);
+  display:flex;
+  flex:1 1 auto;
+  flex-wrap:nowrap;
+  padding:2px 2px 8px 2px;
+}
+.dark #topBar { border-color:var(--cW1); }
+#topBar > div:first-child { font-weight:bold; padding:5px 8px; text-align:center; }
+#topBar > div:nth-child(3) { padding:3px 11px 0px 11px; }
+#topBar > div:last-child { margin-left:auto; }
+#warning { color:red; font-size:115%; font-weight:bold; }
+#version { float:right; margin-right:20px;}
+#undoWrap { float:right; }
+
+
+/*************** CSS Classes ***************/
+.card {
+  background-color:var(--cB3);
+  color:var(--cY2);
+  padding:7px;
+  border:solid 5px var(--cBlue3);
+  border-radius:10px;
+  position:absolute;
+  right:5px;
+  top:34px;
+  width:90%;
+}
+.card > div { padding:10px 5px; }
+.card > div+div { border-top:solid 2px var(--cB2); }
+.card h3 { margin:0px 0px 5px 0px; }
+.card p { margin:10px 0px; padding:0px 15px; }
+.cardClose {
+  display:inline-block;
+  background-color:var(--cR1);
+  border:solid 1px var(--cB2);
+  border-radius:4px;
+  color:var(--cB2);
+  cursor:pointer;
+  float:right;
+  font-weight:bold;
+  font-size:125%;
+  padding:0px 5px;
+}
+.cardClose:hover { border-color:var(--cR3); }
+.icon {
+  color:var(--cBlue1);
+  cursor:pointer;
+  margin:8px 6px;
+}
+.dark .icon { color:var(--cY2); }
+.icon:hover { filter:hue-rotate(35deg); }
+html.dark .icon:hover { filter:hue-rotate(-45deg); }
+.invisible { display:none; }
+.whisper { color:var(--cB4); }
+.dark .whisper { color:var(--cY4); }
+  </style>
+
+
+
+  <!-- Static Encryption Key can be linked like this -->
+  <!-- <script src="./cb_key.js"></script> -->
+
+  <!-- Cypher Bunk Javascript -->
+  <script type="text/javascript">
+/********** GLOBAL VARIABLES **********/
+var _g = {
+  DEBUG_LEVEL: 1, //0:Off, 1:Basic Messages, 2:Details, 3:Noisy
+  cypherbunk: null, //Holds the CypherBunk object
+  dom: {}, //Holds several dom elements for easy access
+  message: null,
+  undoText: "", //What was in _g.dom.message before we replaced it
+  ASCII_LOGOS: [
+    //Full with Diagonal Stripes behind the text
+    "IOKVreKUgeKUgeKUgeKVruKVseKVseKVseKVsSAg4pWt4pWuICDilbHilbHilbHilbHila3ilIHilIHila4gIOKVseKVseKVseKVseKVreKVriAgICDilbHilbHilbHilbEKIOKUg+KVreKUgeKVruKUg+KVseKVseKVsSAgIOKUg+KUgyDilbHilbHilbHilbEg4pSD4pWt4pWu4pSDIOKVseKVseKVseKVsSDilIPilIMgICDilbHilbHilbHilbEKIOKUg+KUgyDilbDilYvila7ilbHila3ilLPilIHilIHilKvilbDilIHilLPilIHilIHilLPilIHilKvilbDila/ilbDilLPila7ila3ilLPilIHilIHila7ilIPila3ila7ilbHilbHilbHilbEKIOKUg+KUgyDila3ilKvilIMg4pSD4pSD4pWt4pWu4pSD4pWt4pWu4pSDIOKUgeKUq+KVreKUq+KVreKUgeKVruKUg+KUg+KUg+KUg+KVreKVruKUg+KVsOKVr+KVr+KVseKVseKVsQog4pSD4pWw4pSB4pWv4pSD4pWw4pSB4pWv4pSD4pWw4pWv4pSD4pSD4pSD4pSDIOKUgeKUq+KUg+KUg+KVsOKUgeKVr+KUg+KVsOKVr+KUg+KUg+KUg+KUg+KVreKVruKVruKVseKVsQog4pWw4pSB4pSB4pSB4pS74pSB4pWu4pWt4pSr4pWt4pSB4pS74pWv4pWw4pS74pSB4pSB4pS74pWv4pWw4pSB4pSB4pSB4pS74pSB4pSB4pS74pWv4pWw4pS74pWv4pWw4pWv4pWxCuKVseKVseKVseKVsSDila3ilIHila/ilIPilIPilIPilbHilbHilbEgICAgICDilbHilbHilbHilbEgICAgICDilbHilbHilbHilbEK4pWx4pWx4pWxICDilbDilIHilIHila/ilbDila/ilbHilbEgICAgICDilbHilbHilbHilbEgICAgICDilbHilbHilbHilbEK"
+    //Full with Rounded Font & left ribbon
+    ,"ICkgKQooICggICAgX19fX19fICAgICAgICAgICAgXyAgICAgICAgICAgICAgICAgX19fX19fICAgICAgICAgICAgICBfCiApICkgIC8gX19fX18pICAgICAgICAgIHwgfCAgICAgICAgICAgICAgIChfX19fICBcICAgICAgICAgICAgfCB8CiggKCAgfCAvICAgICBfICAgXyBfX19fIHwgfCBfICAgX19fXyAgX19fXyBfX19fKSAgKV8gICBfIF9fX18gfCB8ICBfCiApICkgfCB8ICAgIHwgfCB8IHwgIF8gXHwgfHwgXCAvIF8gICkvIF9fXykgIF9fICAofCB8IHwgfCAgXyBcfCB8IC8gKQooICggIHwgXF9fX198IHxffCB8IHwgfCB8IHwgfCAoICgvIC98IHwgICB8IHxfXykgICkgfF98IHwgfCB8IHwgfDwgKAogKSApICBcX19fX19fKV9fICB8IHx8Xy98X3wgfF98XF9fX18pX3wgICB8X19fX19fLyBcX19fX3xffCB8X3xffCBcXykKKCAoICAgICAgICAgKF9fX18vfF98CiApICk"
+    //Split 2076 with box letters where the P and B are colored boxes (Blue/Red)
+    ,"ICDwn4WyIPCfhogg8J+FvyDwn4W3IPCfhbQg8J+GgQoKICAg8J+FsSDwn4aEICDwn4W9ICDwn4W6Cgog4paI4paA4paIIOKWiOKWgOKWgOKWiCDiloDiloDiloDilogg4paE4paA4paA4paECiAg4paE4paAIOKWiOKWhOKWgOKWiCAgIOKWiCAg4paI4paE4paECiDilojiloTiloQg4paI4paE4paE4paIICDilpDilowgIOKWgOKWhOKWhOKWgAo"
+    //Split in Box with Right Bottom Corner Missing
+    ,"4paI4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paICuKWiCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICDilogK4paIICAgIOKWiOKWgOKWgOKAg+KWiOKWhOKWiOKAg+KWiOKWgOKWiOKAg+KWiOKWkeKWiOKAg+KWiOKWgOKWgOKAg+KWiOKWgOKWiCAgICDilogK4paIICAgIOKWiOKWhOKWhOKAg+KWkeKWiOKWkeKAg+KWiOKWgOKWgOKAg+KWiOKWgOKWiOKAg+KWiOKWiOKWhOKAg+KWiOKWgOKWhCAgICDilogK4paIICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIOKWiAriloggICAgICAgIOKWiOKWhOKWhOKAg+KWiOKWkeKWiOKAg+KWiOKWhOKWkeKWiOKAg+KWiOKWhOKWgCAgICAgIOKWiAriloggICAgICAgIOKWiOKWhOKWiOKAg+KWiOKWhOKWiOKAg+KWiOKWkeKWgOKWiOKAg+KWiOKWkeKWiCAgICAg4paICuKWiCAgICAgICAgICAgICAgICAgICAgICAgICAgICDilogK4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA4paA"
+    //Split with Stripes leaned to the right
+    ,"ICAgICAgIOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAogICAgICDilIDilZTilZDilZfilIDilIDilIDilZTilZfilIDilIDilIDilIDilIDilIDilIDilIDilIAKICAgICDilIDilIDilZHilZTilazilabilabilZDilaPilZrilabilZDilabilZDilZfilIDilIDilIAKICAgIOKUgOKUgOKUgOKVkeKVmuKVo+KVkeKVkU/ilZHilZHilZHilanilaPilZHilZ3ilIDilIAKICAg4pSA4pSA4pSA4pSA4pWa4pWQ4pWs4pWX4pWR4pWU4pWp4pWp4pWp4pWQ4pWp4pWd4pSA4pSACiAg4pSA4pSA4pSA4pWU4pWQ4pWQ4pWX4pWa4pWQ4pWp4pWd4pWU4pWX4pSA4pSA4pSA4pSA4pSACiDilIDilIDilIDilIDilZHilZTilZfilaDilabilabilZDilabilaPilaDilZfilIDilIDilIAK4pSA4pSA4pSA4pSA4pSA4pWR4pWU4pWX4pWR4pWR4pWR4pWR4pWR4pWR4pWQ4pWj4pSA4pSACuKUgOKUgOKUgOKUgOKUgOKVmuKVkOKVkOKVqeKVkOKVqeKVqeKVkOKVqeKVqeKVneKUgArilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIA"
+    //Split Polybius
+    ,"LiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLgouIF9fX19fXyBfXyAgIF9fIF9fX19fX18gXyAgIF8gX19fX19fIF9fX19fXyAgICAuCi58ICAgICAgfCAgfCB8ICB8ICAgICAgIHwgfCB8IHwgICAgICB8ICAgIF8gfCAgIC4KLnwgICBfX198ICB8X3wgIHwgICAgXyAgfCB8X3wgfCAgIF9fX3wgICB8IHx8ICAgLgoufCAgfCAgIHwgICAgICAgfCAgIHxffCB8ICAgICB8ICB8X19ffCAgIHxffHxfICAuCi58ICB8ICAgfF8gICAgIF98ICAgIF9fX3wgIF8gIHwgICBfX198ICAgIF9fICB8IC4KLnwgIHxfX18gIHwgICB8IHwgICB8ICAgfCB8IHwgfCAgfF9fX3wgICB8ICB8IHwgLgoufF9fX19fX3wgfF9fX3wgfF9fX3wgICB8X3wgfF98X19fX19ffF9fX3wgIHxffCAuCi4gICAgICAgX19fX19fXyBfX18gICBfXyBfX19fICAgIF8gX19fICAgXyAgICAgIC4KLiAgICAgIHwgICAgXyAgfCAgIHwgfCAgfCAgICB8ICB8IHwgICB8IHwgfCAgICAgLgouICAgICAgfCAgIHxffCB8ICAgfCB8ICB8ICAgICB8X3wgfCAgIHxffCB8ICAgICAuCi4gICAgICB8ICAgICAgIHxfICB8IHwgIHwgICAgICAgICB8ICAgICAgX3wgICAgIC4KLiAgICAgIHwgICBfXyAgICB8IHxffCAgfCAgICBfICAgIHwgICAgIHxfICAgICAgLgouICAgICAgfCAgfF9ffCAgIHwgICAgICB8ICAgfCB8ICAgfCAgICBfICB8ICAgICAuCi4gICAgICB8X19fX19fX19ffF9fX19fX3xfX198ICB8X198X19ffCB8X3wgICAgIC4KLiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLg"
+    //Split with cross-hatch hazey crest
+    ,"4paR4paI4paI4paI4paI4paI4pWX4paR4paI4paI4pWX4paR4paR4paR4paI4paI4pWX4paI4paI4paI4paI4paI4paI4pWX4paR4paI4paI4pWX4paR4paR4paI4paI4pWX4paI4paI4paI4paI4paI4paI4paI4pWX4paI4paI4paI4paI4paI4paI4pWX4paRCuKWiOKWiOKVlOKVkOKVkOKWiOKWiOKVl+KVmuKWiOKWiOKVl+KWkeKWiOKWiOKVlOKVneKWiOKWiOKVlOKVkOKVkOKWiOKWiOKVl+KWiOKWiOKVkeKWkeKWkeKWiOKWiOKVkeKWiOKWiOKVlOKVkOKVkOKVkOKVkOKVneKWiOKWiOKVlOKVkOKVkOKWiOKWiOKVlwrilojilojilZHilpHilpHilZrilZDilZ3ilpHilZrilojilojilojilojilZTilZ3ilpHilojilojilojilojilojilojilZTilZ3ilojilojilojilojilojilojilojilZHilojilojilojilojilojilZfilpHilpHilojilojilojilojilojilojilZTilZ0K4paI4paI4pWR4paR4paR4paI4paI4pWX4paR4paR4pWa4paI4paI4pWU4pWd4paR4paR4paI4paI4pWU4pWQ4pWQ4pWQ4pWd4paR4paI4paI4pWU4pWQ4pWQ4paI4paI4pWR4paI4paI4pWU4pWQ4pWQ4pWd4paR4paR4paI4paI4pWU4pWQ4pWQ4paI4paI4pWXCuKVmuKWiOKWiOKWiOKWiOKWiOKVlOKVneKWkeKWkeKWkeKWiOKWiOKVkeKWkeKWkeKWkeKWiOKWiOKVkeKWkeKWkeKWkeKWkeKWkeKWiOKWiOKVkeKWkeKWkeKWiOKWiOKVkeKWiOKWiOKWiOKWiOKWiOKWiOKWiOKVl+KWiOKWiOKVkeKWkeKWkeKWiOKWiOKVkQrilpHilZrilZDilZDilZDilZDilZ3ilpHilpHilpHilpHilZrilZDilZ3ilpHilpHilpHilZrilZDilZ3ilpHilpHilpHilpHilpHilZrilZDilZ3ilpHilpHilZrilZDilZ3ilZrilZDilZDilZDilZDilZDilZDilZ3ilZrilZDilZ3ilpHilpHilZrilZDilZ0KIOKWkeKWkeKWkeKWkeKWkeKWkeKWiOKWiOKWiOKWiOKWiOKWiOKVl+KWkeKWiOKWiOKVl+KWkeKWkeKWkeKWiOKWiOKVl+KWiOKWiOKWiOKVl+KWkeKWkeKWiOKWiOKVl+KWiOKWiOKVl+KWkeKWkeKWiOKWiOKVl+KWkeKWkeKWkeKWkeKWkeKWkQogIOKWkeKWkeKWkeKWkeKWkeKWiOKWiOKVlOKVkOKVkOKWiOKWiOKVl+KWiOKWiOKVkeKWkeKWkeKWkeKWiOKWiOKVkeKWiOKWiOKWiOKWiOKVl+KWkeKWiOKWiOKVkeKWiOKWiOKVkeKWkeKWiOKWiOKVlOKVneKWkeKWkeKWkeKWkeKWkQogICDilpHilpHilpHilpHilojilojilojilojilojilojilabilZ3ilojilojilZHilpHilpHilpHilojilojilZHilojilojilZTilojilojilZfilojilojilZHilojilojilojilojilojilZDilZ3ilpHilpHilpHilpHilpEKICAgIOKWkeKWkeKWkeKWiOKWiOKVlOKVkOKVkOKWiOKWiOKVl+KWiOKWiOKVkeKWkeKWkeKWkeKWiOKWiOKVkeKWiOKWiOKVkeKVmuKWiOKWiOKWiOKWiOKVkeKWiOKWiOKVlOKVkOKWiOKWiOKVl+KWkeKWkeKWkeKWkQogICAgIOKWkeKWkeKWiOKWiOKWiOKWiOKWiOKWiOKVpuKVneKVmuKWiOKWiOKWiOKWiOKWiOKWiOKVlOKVneKWiOKWiOKVkeKWkeKVmuKWiOKWiOKWiOKVkeKWiOKWiOKVkeKWkeKVmuKWiOKWiOKVl+KWkeKWkQogICAgICDilpHilZrilZDilZDilZDilZDilZDilZ3ilpHilpHilZrilZDilZDilZDilZDilZDilZ3ilpHilZrilZDilZ3ilpHilpHilZrilZDilZDilZ3ilZrilZDilZ3ilpHilpHilZrilZDilZ3ilpE"
+    //CB Blocks
+    ,"IC4tLS0tLS0tLS0tLS0tLS0tLiAuLS0tLS0tLS0tLS0tLS0tLS4KfCAuLS0tLS0tLS0tLS0tLS0uIHwgLi0tLS0tLS0tLS0tLS0tLiB8CnwgfCAgICBfX19fX18gICAgfCB8IHwgICBfX19fX18gICAgIHwgfAp8IHwgICAvICBfX18gXCAgIHwgfCB8ICAgXCAgIF8gXCAgICB8IHwKfCB8ICB8ICAvICAgXF98ICB8IHwgfCAgICB8IHxfKSB8ICAgfCB8CnwgfCAgfCAgfCAgICAgICAgfCB8IHwgICAgfCAgX18gPCAgIHwgfAp8IHwgIFwgIFxfX18vXCAgIHwgfCB8ICAgX3wgfF9fKSB8ICB8IHwKfCB8ICAgXF9fX19fXy8gICB8IHwgfCAgIFxfX19fX19fLyAgfCB8CnwgfCAgICAgICAgICAgICAgfCB8IHwgICAgICAgICAgICAgIHwgfAp8ICctLS0tLS0tLS0tLS0tLScgfCAnLS0tLS0tLS0tLS0tLS0nIHwKICctLS0tLS0tLS0tLS0tLS0tJyAnLS0tLS0tLS0tLS0tLS0tLScK"
+    //-CB- 2076 in big box
+    ,"4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paICuKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWiOKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiArilojilojilojilojilojilojilojilojilojilojilojilojilojilojilojilpHilpHiloTiloDiloTiloDiloTiloDiloTiloDiloTiloDilpHilpHilojilpHilpHiloTiloDiloTiloDiloTiloDiloTiloDiloTiloDilpHilpHilojilojilojilojilojilojilojilojilojilojilojilojilojilojilojilojilogK4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paR4paR4paE4paA4paR4paR4paR4paR4paR4paR4paR4paR4paR4paR4paI4paR4paR4paE4paA4paR4paR4paR4paR4paR4paR4paE4paA4paR4paR4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paICuKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWkeKWkeKWhOKWgOKWkeKWkeKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWkeKWkeKWhOKWgOKWkeKWkeKWiOKWiOKWkeKWkeKWhOKWgOKWkeKWkeKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiArilojilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilojilpHilpHiloTiloDilpHilpHilojilojilojilojilojilojilojilojilojilpHilpHiloTiloDilpHilpHilpHilpHilpHilpHiloTiloDilpHilpHilpHilpHilojilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilogK4paI4paR4paR4paE4paA4paE4paA4paE4paA4paE4paA4paE4paA4paR4paI4paR4paR4paE4paA4paR4paR4paI4paI4paI4paI4paI4paI4paI4paI4paI4paR4paR4paE4paA4paE4paA4paE4paA4paE4paA4paE4paA4paE4paA4paR4paR4paI4paR4paR4paE4paA4paE4paA4paE4paA4paE4paA4paE4paA4paR4paICuKWiOKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWiOKWkeKWkeKWhOKWgOKWkeKWkeKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWkeKWkeKWhOKWgOKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWhOKWgOKWkeKWkeKWiOKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWiArilojilojilojilojilojilojilojilojilojilojilojilojilojilojilojilpHilpHiloTiloDilpHilpHilojilojilojilojilojilojilojilojilojilpHilpHiloTiloDilpHilpHilojilojilojilojilpHilpHiloTiloDilpHilpHilojilojilojilojilojilojilojilojilojilojilojilojilojilojilogK4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paR4paR4paE4paA4paR4paR4paR4paR4paR4paR4paR4paR4paR4paR4paI4paR4paR4paE4paA4paR4paR4paR4paR4paR4paR4paR4paR4paE4paA4paR4paR4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paICuKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWkeKWkeKWhOKWgOKWhOKWgOKWhOKWgOKWhOKWgOKWhOKWgOKWkeKWkeKWiOKWkeKWkeKWhOKWgOKWhOKWgOKWhOKWgOKWhOKWgOKWhOKWgOKWhOKWgOKWkeKWkeKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiArilojilojilojilojilojilojilojilojilojilojilojilojilojilojilojilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilojilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilojilojilojilojilojilojilojilojilojilojilojilojilojilojilogK4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paICuKWiOKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWiOKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWiOKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWiOKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWiArilojilpHilpHiloTiloDiloTiloDiloTiloDiloTiloDiloTiloDilpHilpHilojilpHilpHiloTiloDiloTiloDiloTiloDiloTiloDiloTiloDilpHilpHilojilpHilpHiloTiloDiloTiloDiloTiloDiloTiloDiloTiloDilpHilpHilojilpHilpHiloTiloDiloTiloDiloTiloDiloTiloDiloTiloDilpHilpHilogK4paI4paR4paR4paR4paR4paR4paR4paR4paR4paR4paR4paE4paA4paR4paR4paI4paR4paR4paE4paA4paR4paR4paR4paR4paR4paR4paE4paA4paR4paR4paI4paR4paR4paR4paR4paR4paR4paR4paR4paR4paR4paE4paA4paR4paR4paI4paR4paR4paE4paA4paR4paR4paR4paR4paR4paR4paR4paR4paR4paR4paICuKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWkeKWkeKWhOKWgOKWkeKWkeKWiOKWkeKWkeKWhOKWgOKWkeKWkeKWiOKWiOKWkeKWkeKWhOKWgOKWkeKWkeKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWkeKWkeKWhOKWgOKWkeKWkeKWiOKWkeKWkeKWhOKWgOKWkeKWkeKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiArilojilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHiloTiloDilpHilpHilojilpHilpHiloTiloDilpHilpHilojilojilpHilpHiloTiloDilpHilpHilojilojilojilojilojilojilojilojilojilpHilpHiloTiloDilpHilpHilojilpHilpHiloTiloDilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilogK4paI4paR4paR4paE4paA4paE4paA4paE4paA4paE4paA4paE4paA4paR4paR4paI4paR4paR4paE4paA4paR4paR4paI4paI4paR4paR4paE4paA4paR4paR4paI4paI4paI4paI4paI4paI4paI4paI4paI4paR4paR4paE4paA4paR4paR4paI4paR4paR4paE4paA4paE4paA4paE4paA4paE4paA4paE4paA4paR4paR4paICuKWiOKWkeKWkeKWhOKWgOKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWkeKWiOKWkeKWkeKWhOKWgOKWkeKWkeKWiOKWiOKWkeKWkeKWhOKWgOKWkeKWkeKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWkeKWkeKWhOKWgOKWkeKWkeKWiOKWkeKWkeKWhOKWgOKWkeKWkeKWkeKWkeKWkeKWkeKWhOKWgOKWkeKWkeKWiArilojilpHilpHiloTiloDilpHilpHilojilojilojilojilojilojilojilojilojilpHilpHiloTiloDilpHilpHilojilojilpHilpHiloTiloDilpHilpHilojilojilojilojilojilojilojilojilojilpHilpHiloTiloDilpHilpHilojilpHilpHiloTiloDilpHilpHilojilojilpHilpHiloTiloDilpHilpHilogK4paI4paR4paR4paE4paA4paR4paR4paR4paR4paR4paR4paR4paR4paR4paR4paI4paR4paR4paE4paA4paR4paR4paR4paR4paR4paR4paE4paA4paR4paR4paI4paI4paI4paI4paI4paI4paI4paI4paI4paR4paR4paE4paA4paR4paR4paI4paR4paR4paE4paA4paR4paR4paR4paR4paR4paR4paE4paA4paR4paR4paICuKWiOKWkeKWkeKWhOKWgOKWhOKWgOKWhOKWgOKWhOKWgOKWhOKWgOKWkeKWkeKWiOKWkeKWkeKWhOKWgOKWhOKWgOKWhOKWgOKWhOKWgOKWhOKWgOKWkeKWkeKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWkeKWkeKWhOKWgOKWkeKWkeKWiOKWkeKWkeKWhOKWgOKWhOKWgOKWhOKWgOKWhOKWgOKWhOKWgOKWkeKWkeKWiArilojilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilojilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilojilojilojilojilojilojilojilojilojilpHilpHilpHilpHilpHilpHilojilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilpHilogK4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI4paI"
+  ],
+  /******************** Utility Functions ********************/
+  debug:function(msg, debugLevel=1, title='') { //Logs Messages to Console ONLY IF DEBUG_LEVEL >= debugLevel
+    if (debugLevel <= this.DEBUG_LEVEL) {
+      if (title.length > 0)
+        console.log("========== " + title + " ==========");
+      console.log(msg);
+    }
+  },
+  debug0:function(msg,title=''){ _g.debug(msg, 0, title); },
+  debug1:function(msg,title=''){ _g.debug(msg, 1, title); },
+  debug2:function(msg,title=''){ _g.debug(msg, 2, title); },
+  debug3:function(msg,title=''){ _g.debug(msg, 3, title); },
+  randRange:function(max,min=0){ //Rand int between max/min inclusive
+    if (min > max) { //Someone sent params backward. Swap 'em
+      let temp = min;
+      min = max;
+      max = temp;
+    }
+    let diff = max - min;
+    return Math.floor(Math.random() * (diff + 1)) + min;
+  },
+  round:function(n,precision=0){
+    let pow = Math.pow(10, precision);
+    return Math.round(n * pow) / pow;
+  },
+  strReverse:function(s){ return s.split('').reverse().join(''); },
+}
+_g.debug1('DEBUG LEVEL set to ' + _g.DEBUG_LEVEL);
+
+
+
+/********** Class: CypherCSV **********/
+/**
+ * Able to convert numeric text (CypherBunk cypher text) into a pretend CSV
+ */
+class CypherCSV {
+  static A_AIRPORT = ['ATL','PEK','LHR','ORD','HND','LAX','CDG','DFW','FRA','HKG','DEN','DXB','CGK','AMS','MAD','BKK','JFK','SIN','CAN','LAS','PVG','SFO','PHX','IAH','CLT','MIA','MCO','FCO','SYD','LGW','EWR','YYZ','SHA','MSP','SEA','DTW','PHL','BOS','NRT','ORY','MEX','LGA','FLL','IAD','BWI','VIE','OSL','SLC','BOG','MXP','JNB','ARN','MDW','DCA','DUB','GMP','TXL','SAN','TPA'];
+  static A_COMPASS = ['N','S','E','W','NE','NW','SE','SW'];
+  static A_COUNTRY = [
+    ["United States of America","US","USA"],
+    ["China","CN","CHN"],
+    ["United Kingdom","GB","GBR"],
+    ["Japan","JP","JPN"],
+    ["France","FR","FRA"],
+    ["South Korea","KR","KOR"],
+    ["Afghanistan","AF","AFG"],
+    ["Aland Islands","AX","ALA"],
+    ["Albania","AL","ALB"],
+    ["Algeria","DZ","DZA"],
+    ["American Samoa","AS","ASM"],
+    ["Andorra","AD","AND"],
+    ["Angola","AO","AGO"],
+    ["Anguilla","AI","AIA"],
+    ["Antarctica","AQ","ATA"],
+    ["Antigua and Barbuda","AG","ATG"],
+    ["Argentina","AR","ARG"],
+    ["Armenia","AM","ARM"],
+    ["Aruba","AW","ABW"],
+    ["Australia","AU","AUS"],
+    ["Austria","AT","AUT"],
+    ["Azerbaijan","AZ","AZE"],
+    ["Bahamas","BS","BHS"],
+    ["Bahrain","BH","BHR"],
+    ["Bangladesh","BD","BGD"],
+    ["Barbados","BB","BRB"],
+    ["Belarus","BY","BLR"],
+    ["Belgium","BE","BEL"],
+    ["Belize","BZ","BLZ"],
+    ["Benin","BJ","BEN"],
+    ["Bermuda","BM","BMU"],
+    ["Bhutan","BT","BTN"],
+    ["Bolivia","BO","BOL"],
+    ["Bonaire, Sint Eustatius and Saba","BQ","BES"],
+    ["Bosnia and Herzegovina","BA","BIH"],
+    ["Botswana","BW","BWA"],
+    ["Bouvet Island","BV","BVT"],
+    ["Brazil","BR","BRA"],
+    ["British Indian Ocean Territory","IO","IOT"],
+    ["Brunei Darussalam","BN","BRN"],
+    ["Bulgaria","BG","BGR"],
+    ["Burkina Faso","BF","BFA"],
+    ["Burundi","BI","BDI"],
+    ["Cabo Verde","CV","CPV"],
+    ["Cambodia","KH","KHM"],
+    ["Cameroon","CM","CMR"],
+    ["Canada","CA","CAN"],
+    ["Cayman Islands","KY","CYM"],
+    ["Central African Republic","CF","CAF"],
+    ["Chad","TD","TCD"],
+    ["Chile","CL","CHL"],
+    ["Christmas Island","CX","CXR"],
+    ["Cocos Islands","CC","CCK"],
+    ["Colombia","CO","COL"],
+    ["Comoros","KM","COM"],
+    ["Democratic Republic of Congo","CD","COD"],
+    ["Congo","CG","COG"],
+    ["Cook Islands","CK","COK"],
+    ["Costa Rica","CR","CRI"],
+    ["Croatia","HR","HRV"],
+    ["Cuba","CU","CUB"],
+    ["Curaçao","CW","CUW"],
+    ["Cyprus","CY","CYP"],
+    ["Czechia","CZ","CZE"],
+    ["Côte d'Ivoire","CI","CIV"],
+    ["Denmark","DK","DNK"],
+    ["Djibouti","DJ","DJI"],
+    ["Dominica","DM","DMA"],
+    ["Dominican Republic","DO","DOM"],
+    ["Ecuador","EC","ECU"],
+    ["Egypt","EG","EGY"],
+    ["El Salvador","SV","SLV"],
+    ["Equatorial Guinea","GQ","GNQ"],
+    ["Eritrea","ER","ERI"],
+    ["Estonia","EE","EST"],
+    ["Eswatini","SZ","SWZ"],
+    ["Ethiopia","ET","ETH"],
+    ["Falkland Islands","FK","FLK"],
+    ["Faroe Islands","FO","FRO"],
+    ["Fiji","FJ","FJI"],
+    ["Finland","FI","FIN"],
+    ["French Guiana","GF","GUF"],
+    ["French Polynesia","PF","PYF"],
+    ["French Southern Territories","TF","ATF"],
+    ["Gabon","GA","GAB"],
+    ["Gambia","GM","GMB"],
+    ["Georgia","GE","GEO"],
+    ["Germany","DE","DEU"],
+    ["Ghana","GH","GHA"],
+    ["Gibraltar","GI","GIB"],
+    ["Greece","GR","GRC"],
+    ["Greenland","GL","GRL"],
+    ["Grenada","GD","GRD"],
+    ["Guadeloupe","GP","GLP"],
+    ["Guam","GU","GUM"],
+    ["Guatemala","GT","GTM"],
+    ["Guernsey","GG","GGY"],
+    ["Guinea","GN","GIN"],
+    ["Guinea-Bissau","GW","GNB"],
+    ["Guyana","GY","GUY"],
+    ["Haiti","HT","HTI"],
+    ["Heard Island and McDonald Islands","HM","HMD"],
+    ["Holy See","VA","VAT"],
+    ["Honduras","HN","HND"],
+    ["Hong Kong","HK","HKG"],
+    ["Hungary","HU","HUN"],
+    ["Iceland","IS","ISL"],
+    ["India","IN","IND"],
+    ["Indonesia","ID","IDN"],
+    ["Iran","IR","IRN"],
+    ["Iraq","IQ","IRQ"],
+    ["Ireland","IE","IRL"],
+    ["Isle of Man","IM","IMN"],
+    ["Israel","IL","ISR"],
+    ["Italy","IT","ITA"],
+    ["Jamaica","JM","JAM"],
+    ["Jersey","JE","JEY"],
+    ["Jordan","JO","JOR"],
+    ["Kazakhstan","KZ","KAZ"],
+    ["Kenya","KE","KEN"],
+    ["Kiribati","KI","KIR"],
+    ["North Korea","KP","PRK"],
+    ["Kuwait","KW","KWT"],
+    ["Kyrgyzstan","KG","KGZ"],
+    ["Lao People's Democratic Republic","LA","LAO"],
+    ["Latvia","LV","LVA"],
+    ["Lebanon","LB","LBN"],
+    ["Lesotho","LS","LSO"],
+    ["Liberia","LR","LBR"],
+    ["Libya","LY","LBY"],
+    ["Liechtenstein","LI","LIE"],
+    ["Lithuania","LT","LTU"],
+    ["Luxembourg","LU","LUX"],
+    ["Macao","MO","MAC"],
+    ["Madagascar","MG","MDG"],
+    ["Malawi","MW","MWI"],
+    ["Malaysia","MY","MYS"],
+    ["Maldives","MV","MDV"],
+    ["Mali","ML","MLI"],
+    ["Malta","MT","MLT"],
+    ["Marshall Islands","MH","MHL"],
+    ["Martinique","MQ","MTQ"],
+    ["Mauritania","MR","MRT"],
+    ["Mauritius","MU","MUS"],
+    ["Mayotte","YT","MYT"],
+    ["Mexico","MX","MEX"],
+    ["Micronesia","FM","FSM"],
+    ["Moldova","MD","MDA"],
+    ["Monaco","MC","MCO"],
+    ["Mongolia","MN","MNG"],
+    ["Montenegro","ME","MNE"],
+    ["Montserrat","MS","MSR"],
+    ["Morocco","MA","MAR"],
+    ["Mozambique","MZ","MOZ"],
+    ["Myanmar","MM","MMR"],
+    ["Namibia","NA","NAM"],
+    ["Nauru","NR","NRU"],
+    ["Nepal","NP","NPL"],
+    ["Netherlands","NL","NLD"],
+    ["New Caledonia","NC","NCL"],
+    ["New Zealand","NZ","NZL"],
+    ["Nicaragua","NI","NIC"],
+    ["Niger","NE","NER"],
+    ["Nigeria","NG","NGA"],
+    ["Niue","NU","NIU"],
+    ["Norfolk Island","NF","NFK"],
+    ["Northern Mariana Islands","MP","MNP"],
+    ["Norway","NO","NOR"],
+    ["Oman","OM","OMN"],
+    ["Pakistan","PK","PAK"],
+    ["Palau","PW","PLW"],
+    ["Palestine, State of","PS","PSE"],
+    ["Panama","PA","PAN"],
+    ["Papua New Guinea","PG","PNG"],
+    ["Paraguay","PY","PRY"],
+    ["Peru","PE","PER"],
+    ["Philippines","PH","PHL"],
+    ["Pitcairn","PN","PCN"],
+    ["Poland","PL","POL"],
+    ["Portugal","PT","PRT"],
+    ["Puerto Rico","PR","PRI"],
+    ["Qatar","QA","QAT"],
+    ["Republic of North Macedonia","MK","MKD"],
+    ["Romania","RO","ROU"],
+    ["Russian Federation","RU","RUS"],
+    ["Rwanda","RW","RWA"],
+    ["Réunion","RE","REU"],
+    ["Saint Barthélemy","BL","BLM"],
+    ["Saint Helena, Ascension and Tristan da Cunha","SH","SHN"],
+    ["Saint Kitts and Nevis","KN","KNA"],
+    ["Saint Lucia","LC","LCA"],
+    ["Saint Martin","MF","MAF"],
+    ["Saint Pierre and Miquelon","PM","SPM"],
+    ["Saint Vincent and the Grenadines","VC","VCT"],
+    ["Samoa","WS","WSM"],
+    ["San Marino","SM","SMR"],
+    ["Sao Tome and Principe","ST","STP"],
+    ["Saudi Arabia","SA","SAU"],
+    ["Senegal","SN","SEN"],
+    ["Serbia","RS","SRB"],
+    ["Seychelles","SC","SYC"],
+    ["Sierra Leone","SL","SLE"],
+    ["Singapore","SG","SGP"],
+    ["Dutch Sint Maarten","SX","SXM"],
+    ["Slovakia","SK","SVK"],
+    ["Slovenia","SI","SVN"],
+    ["Solomon Islands","SB","SLB"],
+    ["Somalia","SO","SOM"],
+    ["South Africa","ZA","ZAF"],
+    ["South Georgia and the South Sandwich Islands","GS","SGS"],
+    ["South Sudan","SS","SSD"],
+    ["Spain","ES","ESP"],
+    ["Sri Lanka","LK","LKA"],
+    ["Sudan","SD","SDN"],
+    ["Suriname","SR","SUR"],
+    ["Svalbard and Jan Mayen","SJ","SJM"],
+    ["Sweden","SE","SWE"],
+    ["Switzerland","CH","CHE"],
+    ["Syrian Arab Republic","SY","SYR"],
+    ["Taiwan","TW","TWN"],
+    ["Tajikistan","TJ","TJK"],
+    ["Tanzania, United Republic of","TZ","TZA"],
+    ["Thailand","TH","THA"],
+    ["Timor-Leste","TL","TLS"],
+    ["Togo","TG","TGO"],
+    ["Tokelau","TK","TKL"],
+    ["Tonga","TO","TON"],
+    ["Trinidad and Tobago","TT","TTO"],
+    ["Tunisia","TN","TUN"],
+    ["Turkey","TR","TUR"],
+    ["Turkmenistan","TM","TKM"],
+    ["Turks and Caicos Islands","TC","TCA"],
+    ["Tuvalu","TV","TUV"],
+    ["Uganda","UG","UGA"],
+    ["Ukraine","UA","UKR"],
+    ["United Arab Emirates","AE","ARE"],
+    ["United States Minor Outlying Islands","UM","UMI"],
+    ["Uruguay","UY","URY"],
+    ["Uzbekistan","UZ","UZB"],
+    ["Vanuatu","VU","VUT"],
+    ["Venezuela","VE","VEN"],
+    ["Viet Nam","VN","VNM"],
+    ["British Virgin Islands","VG","VGB"],
+    ["U.S. Virgin Islands","VI","VIR"],
+    ["Wallis and Futuna","WF","WLF"],
+    ["Western Sahara","EH","ESH"],
+    ["Yemen","YE","YEM"],
+    ["Zambia","ZM","ZMB"],
+    ["Zimbabwe","ZW","ZWE"]
+  ];
+  static A_COUNTY = ["Los Angeles","Cook","Harris","Maricopa","San Diego","Orange","Miami-Dade","Dallas","Kings","Riverside","Clark","Queens","King","San Bernardino","Tarrant","Bexar","Broward","Santa Clara","Wayne","Alameda","Middlesex","New York","Sacramento","Philadelphia","Suffolk","Palm Beach","Hillsborough","Orange","Nassau","Bronx","Travis","Franklin","Oakland","Hennepin","Cuyahoga","Allegheny","Salt Lake","Wake","Collin","Contra Costa","Mecklenburg","Fairfax","Fulton","Pima","Montgomery","Duval","Fresno","Honolulu","Westchester","St. Louis","Capitol","Denton","Gwinnett","Marion","Pinellas","Bergen","Erie","Prince George's","Pierce","DuPage","Milwaukee","Shelby","Kern","Fort Bend","Hidalgo","Macomb","El Paso","Montgomery","Worcester","Middlesex","Essex","Baltimore","Snohomish","Ventura","Hamilton","Lee","San Francisco","Essex","Oklahoma","Multnomah","San Joaquin","Polk","Jefferson","Cobb","Suffolk","DeKalb","Monroe","El Paso","San Mateo","Norfolk","Jackson","Denver","Lake","Davidson","Hudson","Utah","Will","Montgomery","Tulsa","Bernalillo"];
+  static A_LANG  = ['en','es','fr','de','it','cn','ja','ko','pt','ro','ru'];
+  static A_REGION  = ['AMER','APAC','EMEA'];
+  static A_REGION2 = ['NORAM','LATAM','APAC','EMEA'];
+  static A_STATE = ["AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","PR","RI","SC","SD","TN","TX","UT","VT","VA","VI","WA","WV","WI","WY"];
+  static A_STATE2 = ["Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming"];
+  static CHARS_AZ  = 'abcdefghijklmnopqrstuvwxyz';
+  static CHARS_AZ2 = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  static CHARS_HEX = 'abcdef';
+  static COL_MIN = 4;
+  static COL_MAX = 30;
+
+  static FORMAT_I = { //Indexes for FORMATS
+    "min":0, "max":1, //How many characters of cyphertext to use
+    "decimal_min":2, "decimal_max":3, //how many decimal places to use
+    "include_commas":4, //Format the number with commas? (1 = yes, 0 = no)
+    "prefix":5, //Array of prefixes to use (like ["$"] for money, or ["+","-"] for a ledger)
+    "suffix":6, //Array of suffixes to use (like ["%"] for percentages)
+  };
+  static FORMAT_LEN = 7; //length of Standard Definition Arrays for FORMATS
+  static FORMATS = { //Each tested with 1 numeric character, and they still work well enough
+    'barcode':[13,13], //1 234567 987654
+    'ccn1':[16,16, 0,0, 0, [],[]], //16 digit credit card
+    'ccn2':[16,16], //CCN with spaces
+    'commas':[1,7, 0,0, 1, [],[]], //Num formatted to have thousand separating commas
+    'date1':[6,6], //1/2/3456
+    'date2':[4,4], //1/2/34
+    'date3':[8,8], //1234-56-78
+    'date4':[12,12], //1234-56-78 98:76
+    'date5':[14,14], //1234-56-78 98:76:54
+    'date6':[16,16], //1234-56-78 98:76:54.32
+    'dc1':[2,5, 1,3, 1, [],[]], //Decimal + Comma, e.g. 1,234.5 | 12.345
+    'dc2':[3,5, 1,3, 1, [],[]],
+    'dc3':[4,6, 1,2, 1, [],[]],
+    'decimal1':[2,5, 1,4, 0, [],[]], //At least 1 num left of decimal, e.g. 1.2345 | 1234.5
+    'decimal2':[3,6, 1,4, 0, [],[]],
+    'decimal3':[4,7, 1,4, 0, [],[]],
+    'dewey1':[6,6, 3,3, 0, [],[]], //Simple Dewey Decimal, e.g. 123.456
+    'dewey2':[8,8], //123.45 X678
+    'dewey3':[9,9], //123.456 X789
+    'exponent':[5,5], //123^45 (sometimes with a decimal in the base value)
+    'fraction1':[2,5], //Insert one "/" somewhere
+    'fraction2':[6,6], //123 4/56
+    'fraction3':[7,7], //12 34/567
+    'gps1':[12,15], //12.12345, 123.12345 (sometimes make them -)
+    'gps2':[14,17], //12 34.5678, 123 45.6789 (sometimes make them -)
+    'hex6':[0,6], //Hex length 6
+    'hex8':[0,8], //Hex length 8
+    'hex8L':[1,8], //Hex length 8 (lowercase)
+    'hex12':[2,12], //Hex length 12
+    'hex12L':[3,12], //Hex length 12 (lowercase)
+    'hex16':[3,16], //Hex length 16
+    'hex16L':[4,16], //Hex length 16 (lowercase)
+    'id':[8,8, 0,0, 0, [],[]], //Looks like a bank account or routing num
+    'int1':[1,1, 0,0, 0, [],[]],
+    'int2':[2,2, 0,0, 0, [],[]],
+    'int3':[1,3, 0,0, 0, [],[]],
+    'int4':[1,4, 0,0, 0, [],[]],
+    'int5':[2,5, 0,0, 0, [],[]],
+    'int6':[2,6, 0,0, 0, [],[]],
+    'int7':[3,6, 0,0, 0, [],[]],
+    'ip1':[6,7], //12.34.5.67
+    'ip2':[32,32], //1111:2222:3333:4444:5555:6666:7777:8888
+    'ip3':[27,27], //1111:2222:3333::4444:5555:66.77.8.99
+    'isbn1':[10,13], //a Book ISBN ID
+    'isbn2':[10,13], //with "ISBN " prefix
+    'ledger1':[3,6, 2,2, 1, ['+','-'],[]], //+1,234.56 | -123,456
+    'ledger2':[3,7, 0,2, 0, ['+','-'],[]], //+12345.67 | -1234567
+    'ledger3':[3,8, 0,2, 1, ['+','-'],[]], //+123,456.78 | -12,345,678
+    'money1':[3,4, 2,2, 1, ['$'],[]], //$12.34
+    'money2':[4,5, 2,2, 1, ['$'],[]], //$123.45
+    'money3':[5,6, 2,2, 1, ['$'],[]], //$1,234.56
+    'money4':[6,7, 2,2, 1, ['$'],[]], //$12,345.67
+    'path1':[3,20],  //len 10-20, pad with AZ, add 1-2 '/' (& '/' prefix)
+    'path1M':[3,21], //len 11-21, mixed case
+    'path2':[5,30],  //len 15-30, pad with AZ, add 2-4 '/' (& '/' prefix)
+    'path2M':[5,31], //len 16-31, mixed case
+    'path3':[5,40],  //len 25-40, pad with AZ, add 3-6 '/' (& '/' prefix)
+    'path3M':[5,41], //len 26-41, mixed case
+    'percent1':[1,2, 0,0, 0, [],['%']], //99%
+    'percent2':[1,3, 1,2, 0, [],['%']], //12.3% | 1.23%
+    'percent3':[2,4, 1,2, 1, [],['%']], //123.4% | 12.34%
+    'percent4':[3,4, 1,1, 0, [],['%']], //123.4%
+    'percent5':[3,5, 1,1, 1, [],['%']], //1,234.5%
+    'phone1':[7,7], //123-4567
+    'phone2':[10,10], //123.456.7890
+    'phone3':[10,10], //(123) 456-7890
+    'phone4':[11,11], //+1 (234) 567-8901
+    'phone5':[11,11], //+1.234.567.8901
+    'sci_big':[5,6], //1.234E+56
+    'sci_sm':[5,6], //1.234E-56
+    'sku1':[4,6, 0,0, 0, [],[]], //Simple numeric SKU of 4-6 length
+    'sku2':[3,5], //X12345 | XYZ12345
+    'sku3':[3,4], //XYZ1234
+    'sku4':[3,5], //XY_12345 | WXYZ_12345 
+    'sku5':[3,4], //AB_XY_1234
+    'sku6':[3,3], //ABC_XYZ_123
+    'sku7':[3,4], //AB:XY:1234
+    'sku8':[3,3], //ABC:XYZ:123
+    'sku9':[6,9], //X123-45-678
+    'sku10':[6,9], //X123_45_678
+    'sku11':[6,9], //X123:45:678
+    'ssn':[9,9], //123-45-6789
+    'time1':[3,3], //1:23
+    'time2':[5,5], //1:23:45
+    'time3':[7,7], //1:23:45.67
+    'uid1':[12,12, 0,0, 0, [],[]], //12 digit universal ID
+    'uid2':[14,14, 0,0, 0, [],[]], //14 digit universal ID (2 control digits)
+    'upc':[12,12], //12-digit Universal Product Code
+    'zip':[5,5, 0,0, 0, [],[]], //90210
+    'zip2':[9,9], //12345-6789
+
+    //Dummy Alphabetic Values to pad out the CSV (Must be at least 1 non-dummy column)
+    'x_aZ':[0,6],'x_aZ:1':[1,1],'x_aZ:3':[3,3],'x_aZ:5':[5,5], //Mixed-Case
+    'x_az':[0,6],'x_az:2':[2,2],'x_az:4':[4,4],'x_az:6':[6,6], //Lower-Case
+    'x_AZ':[0,6],'x_AZ:1':[1,1],'x_AZ:2':[2,2],'x_AZ:3':[3,3],'x_AZ:4':[4,4], //Ucase
+    'x_Az':[0,8],'x_Az:7':[3,7],'x_Az:9':[4,9], //Camel-Case
+    'x_airport':[], //A_AIRPORT
+    'x_compass':[], //A_COMPASS
+    'x_country1':[],'x_country2':[],'x_country3':[], //United States of America, US, USA
+    'x_county':[], //A_COUNTY
+    'x_language':[], //A_LANG
+    'x_region1':[],'x_region2':[], //A_REGION & A_REGION2
+    'x_state1':[],'x_state2':[], //A_STATE & A_STATE2
+  };
+
+  static format_TEST_ALL(){ //toCSV() does test, but not on all cols at once
+    let input = '';
+    for (let i=1; i <= 333; ++i) //Make long test input
+      input += '000' + i; //Lots of 0's since they are most likely to break things
+    _g.debug("Testing All CypherCSV.FORMAT functions");
+    let keys = Object.keys(CypherCSV.FORMATS);
+    _g.debug('TESTING ' + keys.length + ' formats.');
+    _g.debug2('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+    CypherCSV.toCSV(input, true);
+  }
+
+  /***** format_* functions work with CypherCSV.FORMATS. *****/
+  static format_AAA(input, def){ //Standard Format: use Def array in FORMATS
+    let commas = def[CypherCSV.FORMAT_I.include_commas];
+    let dMin = def[CypherCSV.FORMAT_I.decimal_min];
+    let dMax = def[CypherCSV.FORMAT_I.decimal_max];
+    let prefixA = def[CypherCSV.FORMAT_I.prefix];
+    let suffixA = def[CypherCSV.FORMAT_I.suffix];
+    //Decimals
+    let numDecimals = _g.randRange(dMax, dMin);
+    if (numDecimals > 0) {
+      if (numDecimals > input.length - 1) //If input too short
+        numDecimals = input.length - 1; //What about forced 2 decimals? Just look like an error?
+      if (numDecimals > 0) { //Re-check, now that we've shrunk the decimals
+        let i = input.length - numDecimals;
+        input = input.substr(0, i) + '.' + input.substr(i);
+      }
+    }
+    //Commas
+    if (commas == 1) {
+      let decimalChunks = input.split('.');
+      let reversed = _g.strReverse(decimalChunks[0]);
+      reversed = reversed.replace(/(\d{3})/g, "$1,");
+      input = _g.strReverse(reversed);
+      if (',' == input.substr(0,1)) //Chop off accidental leading comma
+        input = input.substr(1);
+      if (numDecimals > 0)
+        input += '.' + decimalChunks[1];
+    }
+    //Prefix & Suffix
+    if (prefixA.length > 0)
+      input = prefixA[_g.randRange(prefixA.length - 1)] + input;
+    if (suffixA.length > 0)
+      input += suffixA[_g.randRange(suffixA.length - 1)];
+    return input;
+  }
+
+  static format_barcode(input){ //e.g. 1234 5678 9012 3456
+    return input.replace(/(\d)(\d{6})(\d{6})/, '$1 $2 $3');
+  }
+
+  static format_ccn2(input){ //e.g. 1234 5678 9012 3456
+    return input.replace(/(\d{4})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4');
+  }
+
+  static format_date1(input){
+    return input.replace(/(\d)(\d)(\d{4})/, '$1/$2/$3');
+  }
+  static format_date2(input){
+    return input.replace(/(\d)(\d)(\d{2})/, '$1/$2/$3');
+  }
+  static format_date3(input){
+    return input.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
+  }
+  static format_date4(input){
+    return input.replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})/, '$1-$2-$3 $4:$5');
+  }
+  static format_date5(input){
+    return input.replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, '$1-$2-$3 $4:$5:$6');
+  }
+  static format_date6(input){
+    return input.replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, '$1-$2-$3 $4:$5:$6.$7');
+  }
+
+  static format_dewey2(input){
+    let c = CypherCSV.gen_az(1);
+    return input.replace(/(\d{3})(\d{2})(\d{3})/, '$1.$2 '+c+'$3');
+  }
+  static format_dewey3(input){
+    let c = CypherCSV.gen_az(1);
+    return input.replace(/(\d{3})(\d{3})(\d{3})/, '$1.$2 '+c+'$3');
+  }
+
+  static format_exponent(input){ //12.3^45 | 123.4^5 | 1234^5 | 123^45
+    let reA = [
+      new RegExp(/(\d{2})(\d)(\d{2})/),
+      new RegExp(/(\d{3})(\d)(\d)/),
+      new RegExp(/(\d{4})(\d)/),
+      new RegExp(/(\d{3})(\d{2})/)];
+    let replaceA = ['$1.$2^$3','$1.$2^$3','$1^$2','$1^$2'];
+    let i = _g.randRange(replaceA.length - 1);
+    return input.replace(reA[i], replaceA[i]);
+  }
+
+  static format_fraction1(input){ //insert 1 forward slash
+    let i = _g.randRange(input.length - 1, 1); //not at very front or back
+    return input.substr(0,i) + '/' + input.substr(i);
+  }
+  static format_fraction2(input){//e.g. 123 4/56
+    return input.replace(/(\d{3})(\d)(\d{2})/, '$1 $2/$3');
+  }
+  static format_fraction3(input){//e.g. 12 34/567
+    return input.replace(/(\d{2})(\d{2})(\d{3})/, '$1 $2/$3');
+  }
+
+  static format_gps1(input){ //12.12345, 123.12345 (sometimes make them -)
+    let neg1 = _g.randRange(2); //33% chance to go negative
+    let neg2 = _g.randRange(2); //33% because double positive is US centric
+    let re = new RegExp(/(\d)(\d{5})(\d)(\d{5})/); //default to length 12
+    if (input.length == 13)
+      re = new RegExp(/(\d)(\d{5})(\d{2})(\d{5})/);
+    else if (input.length == 14)
+      re = new RegExp(/(\d{2})(\d{5})(\d{2})(\d{5})/);
+    else if (input.length == 15)
+      re = new RegExp(/(\d{2})(\d{5})(\d{3})(\d{5})/);
+    input = input.replace(re, '$1.$2, $3.$4');
+    if (neg1 > 1) input = '-' + input;
+    if (neg2 > 1) input = input.replace(', ', ', -');
+    return input;
+  }
+  static format_gps2(input){ //12 34.5678, 123 45.6789 (sometimes make them -)
+    let neg1 = _g.randRange(2); //33% chance to go negative
+    let neg2 = _g.randRange(2); //33% because double positive is US centric
+    let re = new RegExp(/(\d)(\d{2})(\d{4})(\d)(\d{2})(\d{4})/); //default to length 14
+    if (input.length == 15)
+      re = new RegExp(/(\d)(\d{2})(\d{4})(\d{2})(\d{2})(\d{4})/);
+    else if (input.length == 16)
+      re = new RegExp(/(\d{2})(\d{2})(\d{4})(\d{2})(\d{2})(\d{4})/);
+    else if (input.length == 17)
+      re = new RegExp(/(\d{2})(\d{2})(\d{4})(\d{3})(\d{2})(\d{4})/);
+    input = input.replace(re, '$1 $2.$3, $4 $5.$6');
+    if (neg1 > 1) input = '-' + input;
+    if (neg2 > 1) input = input.replace(', ', ', -');
+    return input;
+  }
+
+  static format_hex(input, len, lcase=false){ //len: length of output (will pad with A-Fs)
+    while (input.length < len) {
+      let c = CypherCSV.gen_hex(1);
+      let i = _g.randRange(input.length, 0); //no -1 on input.length because we want very last one some times
+      input = input.substr(0,i) + c + input.substr(i);
+    }
+    if (lcase)
+      input = input.toLowerCase();
+    return input;
+  }
+  static format_hex6(input){ return CypherCSV.format_hex(input, 6); }
+  static format_hex8(input){ return CypherCSV.format_hex(input, 8); }
+  static format_hex8L(input){ return CypherCSV.format_hex(input, 8, true); }
+  static format_hex12(input){ return CypherCSV.format_hex(input, 12); }
+  static format_hex12L(input){ return CypherCSV.format_hex(input, 12, true); }
+  static format_hex16(input){ return CypherCSV.format_hex(input, 16); }
+  static format_hex16L(input){ return CypherCSV.format_hex(input, 16, true); }
+
+  static format_ip1(input){ //e.g. 12.34.5.6 | 12.34.5.67
+    let re = new RegExp(/(\d{2})(\d{2})(\d)(\d)/);
+    if (input.length == 7)
+      re = new RegExp(/(\d{2})(\d{2})(\d)(\d{2})/);
+    return input.replace(re, '$1.$2.$3.$4');
+  }
+  static format_ip2(input){ //e.g. 1234:5678:8765:4321:1234:5678:8765:4321
+    return input.replace(/(\d{4})(\d{4})(\d{4})(\d{4})(\d{4})(\d{4})(\d{4})(\d{4})/, '$1:$2:$3:$4:$5:$6:$7:$8');
+  }
+  static format_ip3(input){ //e.g. 1111:2222:3333::4444:5555:66.77.8.99
+    return input.replace(/(\d{4})(\d{4})(\d{4})(\d{4})(\d{4})(\d{2})(\d{2})(\d)(\d{2})/, '$1:$2:$3::$4:$5:$6.$7.$8.$9');
+  }
+
+  static format_isbn1(input){ //e.g. 111-2-333-44-5 | 111-2-333333-44-5
+    let re = new RegExp(/(\d{3})(\d)(\d{3})(\d{2})(\d)/);
+    if (input.length == 11)
+      re = new RegExp(/(\d{3})(\d)(\d{4})(\d{2})(\d)/);
+    else if (input.length == 12)
+      re = new RegExp(/(\d{3})(\d)(\d{5})(\d{2})(\d)/);
+    else if (input.length == 13)
+      re = new RegExp(/(\d{3})(\d)(\d{6})(\d{2})(\d)/);
+    return input.replace(re, '$1-$2-$3-$4-$5');
+  }
+  static format_isbn2(input){ //e.g. "ISBN X" where X is format_isbn1 output
+    return 'ISBN ' + CypherCSV.format_isbn1(input);
+  }
+
+  static format_path(input, min,max, caps=1){ //len: length of output, caps: see gen_az()
+    let len = _g.randRange(max, min);
+    if (len < input.length)
+      len = input.length;
+    while (input.length < len) { //Pad out length with Rand Chars
+      let c = CypherCSV.gen_azAZ(1, caps);
+      let i = _g.randRange(input.length, 0); //no -1 on input.length because we want very last one some times
+      input = input.substr(0,i) + c + input.substr(i);
+    }
+    //Determine Num Slashes to insert
+    max = Math.ceil(len / 5);
+    min = Math.floor(len / 8);
+    let numSlashes = _g.randRange(max, min);
+    let spacing = Math.round(len / (numSlashes + 1)); //Distribute evenly
+    for (let n=0; n < numSlashes; ++n) {
+      let i = (spacing * (n + 1)) + n; //+n to account for increased input len
+      input = input.substr(0,i) + '/' + input.substr(i);
+    }
+    return '/' + input; //Prefix with slash
+  }
+  static format_path1(input) { return CypherCSV.format_path(input, 10,20); }
+  static format_path1M(input){ return CypherCSV.format_path(input, 11,21, -1); }
+  static format_path2(input) { return CypherCSV.format_path(input, 15,30); }
+  static format_path2M(input){ return CypherCSV.format_path(input, 16,31, -1); }
+  static format_path3(input) { return CypherCSV.format_path(input, 25,40); }
+  static format_path3M(input){ return CypherCSV.format_path(input, 26,41, -1); }
+
+  static format_phone1(input){ //e.g. 123-4567
+    return input.replace(/(\d{3})(\d{4})/, '$1-$2');
+  }
+  static format_phone2(input){ //e.g. 123.456.7890
+    return input.replace(/(\d{3})(\d{3})(\d{4})/, '$1.$2.$3');
+  }
+  static format_phone3(input){ //e.g. (123) 456-7890
+    return input.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3');
+  }
+  static format_phone4(input){ //e.g. +1 (234) 567-8901
+    return input.replace(/(\d)(\d{3})(\d{3})(\d{4})/, '+$1 ($2) $3-$4');
+  }
+  static format_phone5(input){ //e.g. +1.234.567.8901
+    return input.replace(/(\d)(\d{3})(\d{3})(\d{4})/, '+$1.$2.$3.$4');
+  }
+
+  static format_sci_big(input){ //e.g. 1.234E+56
+    let re = new RegExp(/(\d)(\d{3})(\d)/);
+    if (input.length == 6)
+      re = new RegExp(/(\d)(\d{3})(\d{2})/);
+    return input.replace(re, '$1.$2E+$3');
+  }
+  static format_sci_sm(input){ //e.g. 1.234E-56
+    return CypherCSV.format_sci_big(input).replace('+', '-');
+  }
+
+  static format_sku2(input){ //e.g. X12345 | XYZ12345
+    return CypherCSV.gen_az(_g.randRange(3,1)) + input;
+  }
+  static format_sku3(input){ //e.g. XYZ1234
+    return CypherCSV.gen_az(3) + input;
+  }
+  static format_sku4(input){ //e.g. XY_12345 | WXYZ_12345 
+    return CypherCSV.gen_az(_g.randRange(4,2)) + '_' + input;
+  }
+  static format_sku5(input){ //e.g. AB_XY_1234
+    return CypherCSV.gen_az(2) + '_' + CypherCSV.gen_az(2) + '_' + input;
+  }
+  static format_sku6(input){ //e.g. ABC_XYZ_123
+    return CypherCSV.gen_az(3) + '_' + CypherCSV.gen_az(3) + '_' + input;
+  }
+  static format_sku7(input){ //e.g. AB:XY:1234
+    return CypherCSV.gen_az(_g.randRange(3,2)) + ':' + CypherCSV.gen_az(_g.randRange(3,2)) + ':' + input;
+  }
+  static format_sku8(input){ //e.g. ABC:XYZ:123
+    return CypherCSV.gen_az(3) + ':' + CypherCSV.gen_az(3) + ':' + input;
+  }
+  static format_sku9(input){ //e.g. XYZ123-45-678
+    let re = new RegExp(/(\d{2})(\d{2})(\d{2})/);
+    if (input.length == 7)
+      re = new RegExp(/(\d{3})(\d{2})(\d{2})/);
+    if (input.length == 8)
+      re = new RegExp(/(\d{3})(\d{2})(\d{3})/);
+    else if (input.length == 9)
+      re = new RegExp(/(\d{3})(\d{3})(\d{3})/);
+    input = input.replace(re, '$1-$2-$3');
+    return CypherCSV.gen_az(_g.randRange(3,1)) + input;
+  }
+  static format_sku10(input){ //e.g. XYZ123_45_678
+    return CypherCSV.format_sku9(input).replace('-', '_');
+  }
+  static format_sku11(input){ //e.g. XYZ123:45:678
+    return CypherCSV.format_sku9(input).replace('-', ':');
+  }
+
+  static format_ssn(input){ //e.g. 123-45-6789
+    return input.replace(/(\d{3})(\d{2})(\d{4})/, '$1-$2-$3');
+  }
+
+  static format_time1(input){ //e.g. 1:23
+    return input.replace(/(\d{1})(\d{2})/, '$1:$2');
+  }
+  static format_time2(input){ //e.g. 1:23:45
+    return input.replace(/(\d{1})(\d{2})(\d{2})/, '$1:$2:$3');
+  }
+  static format_time3(input){ //e.g. 1:23:45.67
+    return input.replace(/(\d{1})(\d{2})(\d{2})(\d{2})/, '$1:$2:$3.$4');
+  }
+
+  static format_upc(input){ //e.g. 1 23456 65432 1 //Universal Product Code
+    return input.replace(/(\d)(\d{5})(\d{5})(\d)/, '$1 $2 $3 $4');
+  }
+
+  static format_zip2(input){ //e.g. 12345-6789
+    return input.replace(/(\d{5})(\d{4})/, '$1-$2');
+  }
+
+
+  static format_x_aZ(min,max){ //Random mixed-case (len 0-6)
+    return CypherCSV.gen_chars(CypherCSV.CHARS_AZ2, _g.randRange(max,min), -1);
+  }
+  static format_x_az(min,max){ //Random lower-case (len 0-6)
+    return CypherCSV.format_x_aZ(min,max).toLowerCase();  
+  }
+  static format_x_AZ(min,max){ //Random upper-case (len 0-6)
+    return CypherCSV.format_x_aZ(min,max).toUpperCase();  
+  }
+  static format_x_Az(min,max){ //Random Camel-case (len 0-6)
+    let rtn = CypherCSV.format_x_az(min,max); //get lower case
+    return rtn.charAt(0).toUpperCase() + rtn.slice(1);
+  }
+
+  static format_x_airport(min=0,max=0){ //A_AIRPORT
+    return CypherCSV.A_AIRPORT[_g.randRange(CypherCSV.A_AIRPORT.length - 1)];
+  }
+
+  static format_x_compass(min=0,max=0){ //A_COMPASS
+    return CypherCSV.A_COMPASS[_g.randRange(CypherCSV.A_COMPASS.length - 1)];
+  }
+
+  static format_x_country(min=0,max=0,i=0){ //A_COUNTRY (i is 0 for full country, 1 for 2 Letter like US, & 2 for 3 letter like USA)
+    let x = _g.randRange(CypherCSV.A_COUNTRY.length - 1); //Start with random country
+    let r = _g.randRange(100,0);
+    if (r < 70) { //70% chance to be USA (Forced Index)
+      x = 0;
+    } else if (r < 95) { //25% China/UK/Japan/France/SouthKorea (Forced Index)
+      x = _g.randRange(5,1);
+    }
+    return CypherCSV.A_COUNTRY[x][i];
+  }
+  static format_x_country1(min=0,max=0){ return CypherCSV.format_x_country(0,0,0); }
+  static format_x_country2(min=0,max=0){ return CypherCSV.format_x_country(0,0,1); }
+  static format_x_country3(min=0,max=0){ return CypherCSV.format_x_country(0,0,2); }
+
+  static format_x_county(min=0,max=0){ //A_COUNTY
+    return CypherCSV.A_COUNTY[_g.randRange(CypherCSV.A_COUNTY.length - 1)];
+  }
+
+  static format_x_language(min=0,max=0){ //A_LANG
+    let i = _g.randRange(CypherCSV.A_LANG.length - 1);
+    let r = _g.randRange(10,0);
+    if (r < 6) //60% chance to be 'en' for english (Forced Index)
+      i = 0;
+    return CypherCSV.A_LANG[i];
+  }
+
+  static format_x_region1(min=0,max=0){ //A_REGION
+    return CypherCSV.A_REGION[_g.randRange(CypherCSV.A_REGION.length - 1)];
+  }
+  static format_x_region2(min=0,max=0){ //A_REGION2
+    return CypherCSV.A_REGION2[_g.randRange(CypherCSV.A_REGION2.length - 1)];
+  }
+
+  static format_x_state1(min=0,max=0){ //A_STATE
+    return CypherCSV.A_STATE[_g.randRange(CypherCSV.A_STATE.length - 1)];
+  }
+  static format_x_state2(min=0,max=0){ //A_STATE2
+    return CypherCSV.A_STATE2[_g.randRange(CypherCSV.A_STATE2.length - 1)];
+  }
+
+
+  /***** gen_* functions generate rand strings for format_* function *****/
+  static gen_az(len, caps=1) { //caps: see gen_chars()
+    return CypherCSV.gen_chars(CypherCSV.CHARS_AZ, len, caps);
+  }
+  static gen_azAZ(len, caps=-1) {
+    return CypherCSV.gen_chars(CypherCSV.CHARS_AZ2, len, caps);
+  }
+  static gen_chars(chars, len, caps=1) { //caps can be -1/0/1/2 for Unaltered/Lower/Upper/Camel
+    let rtn = '';
+    for (let i=0; i < len; ++i) {
+      let r = _g.randRange(chars.length - 1);
+      let c = chars.substr(r,1);
+      if (caps == 2) { //Camel case
+        if (i == 0)
+          c = c.toUpperCase();
+        else
+          c = c.toLowerCase();
+      }
+      rtn += c;
+    }
+    //Change Character Case
+    if (caps == 1)
+      rtn = rtn.toUpperCase();
+    else if (caps == 0)
+      rtn = rtn.toLowerCase();
+    return rtn;
+  }
+  static gen_hex(len, caps=1) { //caps: see gen_chars()
+    return CypherCSV.gen_chars(CypherCSV.CHARS_HEX, len, caps);
+  }
+
+
+  /**
+   * Take CypherText and convert it into a Obscured CSV
+   * @param input: String of numeric text representing the encrypted message
+   * @param forceAllCols: true to force 1 of each column type (for testing)
+   */
+  static toCSV(input, forceAllCols=false){
+    const NEWLINE = "\n";
+    const QUOTE = '"';
+    let errs = [];
+    let rtn = '';
+    let cols = Object.keys(CypherCSV.FORMATS);
+    //Get Random Column types (or keep default of "all"
+    if (false == forceAllCols) {
+      let colTypes = {};
+      let currNumCols = 0;
+      let numCols = _g.randRange(CypherCSV.COL_MAX, CypherCSV.COL_MIN);
+      while (currNumCols < numCols) {
+        let randK = cols[_g.randRange(cols.length - 1)];
+        let k2 = randK.substr(0,2);
+        //Don't Count Duplicate Cols, nor "x_" cols (don't consume numbers)
+        if (!(randK in colTypes) && 'x_' != k2)
+          ++currNumCols
+        colTypes[randK] = true;
+      }
+      cols = Object.keys(colTypes);
+    }
+    _g.debug("Generating CSV: " + cols.join(', '));
+
+    while (input.length > 0) {
+      let comma = '';
+      for (let k of cols) {
+        if (input.length == 0)
+          break; //If we run out of input mid columns
+        let def = CypherCSV.FORMATS[k];
+        let f = 'format_' + k;
+        let k2 = k.substr(0,2);
+        let min = 0;
+        let max = 0;
+        let randLen = 0;
+        if (def.length >= 2) {
+          min = def[CypherCSV.FORMAT_I.min];
+          max = def[CypherCSV.FORMAT_I.max];
+          randLen = _g.randRange(max, min);
+          if (input.length < randLen) //Limit to final few characters
+            randLen = input.length;
+        }
+        let chunk = input.substr(0, randLen);
+        if ('x_' != k2) //Don't Consume Cyphertext if it's a dummy-generator
+          input = input.substr(randLen);
+        let cell = '';
+        //Run the Transformation
+        if ('x_' == k2) { //Special dummy data that doesn't consume cyphertext
+          let funcA = f.split(':'); //Variants that use a base function with different parameters
+          f = funcA[0];
+          cell = CypherCSV[f](min, max);
+        } else if (def.length >= CypherCSV.FORMAT_LEN) {
+          cell = CypherCSV.format_AAA(chunk, def);
+        } else if (f in CypherCSV) {
+          cell = CypherCSV[f](chunk); //Dynamically call format_* function with chunk as param
+        } else {
+          _g.debug0("ERROR_04: No Function " + f + '()');
+        }
+        _g.debug3(k + " -> '" + chunk + "' -> '" + cell + "'");
+        let temp = cell.replace(/[^0-9]/g, ''); //Wipe out everything but numbers
+        if ('x_' != k2 && temp != chunk) //Should Match 100% unless a format is broken
+          errs.push(k + ':' + chunk + ' => ' + temp);
+        rtn += comma + QUOTE + cell + QUOTE;
+        comma = ','; //everything but 1st cell gets prefixed
+      }
+      rtn += NEWLINE;
+      //Bail Early if it's just a test
+      if (forceAllCols)
+        break;
+    }
+    if (errs.length > 0) {
+      _g.debug0('ERROR_05: CypherCSV.toCSV Errors:');
+      _g.debug0(errs);
+    } else {
+      _g.debug('100% Success for CypherCSV.toCSV');
+    }
+    return rtn;
+  }
+}
+
+
+
+/********** Class: CypherBunk **********/
+/**
+ * CypherBunk allows for simple ad-hoc encryption using either a static
+ * cypher, or a URL to fetch whose content should be used as the cypher.
+ * We recommend linking to a versioned utility, like jQuery, so that the
+ * cypher won't change, but alternately if you hosted a rotating cypher on
+ * your own website, it would serve as a built in TTL for the message, as
+ * the cypher will expire.
+ * Either way, you will need to communicate what the cypher is to your
+ * friends, so that they can decrypt the message.
+ * They can either decrypt at localmess.com/cypherbunk, or you can host
+ * the CypherBunk.js on your own site (or PC) and encrypt/decrypt
+ * there. Since it just uses JS, you don't need a Web Server, just a Browser.
+ * Since it is ad-hoc, you don't need to setup public/private keys with
+ * your intended recipients before sending messages.  You can send it now,
+ * and then communicate the cypher key to them via some other method.
+ *
+ * WARNING:
+ *   CypherBunk is *NOT* Military grade encryption.
+ *   Don't use it to encrypt sensitive info.
+ *   It is merely hobbyist encryption for ad-hoc use among friends.
+ *
+ * DEPENDENCY:
+ *   Class: CypherCSV
+ */
+class CypherBunk {
+  /***************************** CONSTANTS *****************************/
+  static VERSION = 2076; //Check to ensure both parties are encrypting/decrypting with same version
+  static ACTION_DECRYPT = "decrypt";
+  static ACTION_ENCRYPT = "encrypt";
+  static CHARS_B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  static CYPHER_CHUNK = 8; //Each B64 Char turns into 8 digits [Set to 7 to increase performance]
+  static CYPHER_MAX = 19999999; //Max modulous before the cypher wraps [Set to 9M to increase performance]
+  static KEY_LEN_MAX = 500000; //Trim key (or key payload) to 500k [Set to 100k to increase performance]
+  static TAG_MESSAGE = "CypherBunk Encrypted Message. Decrypt at www.localmess.com/cypherbunk";
+  //NOTE: static vars CANNOT be accessed with this.VAR but CypherBunk.VAR
+
+  /***************************** VARIABLES *****************************/
+  b64CharCount = {};
+  debugEnabled = false;
+  debugLevel = 0; //1 for basic, 2 for detail
+  hashDec = new Map(); //Maps Cypher Text Character to B64 Decrypted Char
+  hashEnc = new Map(); //Maps B64 Character to array of possible Cypher Characters
+  key = null; //Holds #cypherKey value
+  key64 = null; //Base 64 representation of this.key (or payload of key)
+  keyURL = null; //If #cypherKey was a URL, save here so we know when to cache
+  precomputed = false //If true, we don't need keys (use precomputed ones)
+  precomputedJS = ''; //Holds the JS of the Hashed Cypher Key
+  precomputedWarning = null; //Holds a warning if the Cypher Key was too simple
+  message = null;
+  tallyEnc = {}; //Counts how often a root cypher char (without modulus added) was used
+  tallyTotal = 0; //Total number of cypher chars used (to calculate avg use deviation)
+
+  /***************************** FUNCTIONS *****************************/
+  
+  /**
+   * Create an instance of CypherBunk to use for encryption.
+   * It will check for predefinedDecHash & predefinedEncHash. If these exist,
+   * it will use them to encrypt in a more performant way with those vars.
+   * Those vars can be generated using CypherBunkUI.js & index.html.
+   * @param debugLevel: 0 to turn off debug messages, 1 for basic, 2 for detailed
+   */
+  constructor(debugLevel=0){
+    this.debugEnabled = (debugLevel > 0);
+    this.debugLevel = debugLevel;
+    // Look for Pre-Computed Hashes
+    if (typeof predefinedDecHash !== 'undefined' && predefinedEncHash !== 'undefined') {
+      this.hashDec = predefinedDecHash;
+      this.hashEnc = predefinedEncHash;
+      this.precomputed = true;
+      // Make it obvious to user that we are pre-computing
+      for(let keyWrap of document.querySelectorAll(".keyWrap"))
+        keyWrap.classList.add('invisible');
+      _g.dom.precomputeWrap.classList.remove('invisible');
+    }
+  }
+
+
+  /**
+   * 2 MDN Functions:
+   *  - b64EncodeUnicode: %encoded-UTF8->raw-bytes->base64->no-padding
+   *  - b64DecodeUnicode: bytestream->%encoded-UTF8->orig
+   * Reference: https://stackoverflow.com/questions/30106476/using-javascripts-atob-to-decode-base64-doesnt-properly-decode-utf-8-strings
+   * NOTE: toString(16) converts to HEXADECIMAL
+   */
+  static b64EncodeUnicode(txt) { txt = btoa(encodeURIComponent(txt).replace(/%([0-9A-F]{2})/g, function toSolidBytes(match, p1) { return String.fromCharCode('0x' + p1); })); while("=" == txt.charAt(txt.length-1)) txt = txt.substring(0, txt.length - 1); return txt; }
+  static b64DecodeUnicode(txt) {
+    let rtn = '';
+    try {
+      rtn = decodeURIComponent(atob(txt).split('').map(function(c) { return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2); }).join(''));
+    } catch(e) {
+      rtn = "ERROR: Invalid Cypher Key";
+      _g.debug("ERROR_06: b64DecodeUnicode failed, because of a bad key");
+      _g.debug2(e);
+    }
+    return rtn;
+  }
+
+
+  /**
+   * Calculates a Score for the latest Encryption
+   */
+  calculateScore(){
+    let rtn = { "error":false };
+    if (null == this.key64) {
+      _g.debug("WARNING: calculateScore cannot run before an encryption.", 0);
+      rtn.error = true;
+      rtn.message = "No encryption has run, so we can't score it.";
+      return rtn;
+    }
+    let scoreRunningTotal = 0;
+    let scoreNumCategories = 4; //4 types of tests
+
+    //CALC Key Length
+    let effectiveLen = this.key64.length > CypherBunk.KEY_LEN_MAX ? CypherBunk.KEY_LEN_MAX : this.key64.length;
+    rtn.scoreLen = effectiveLen / CypherBunk.KEY_LEN_MAX;
+    rtn.userLen = effectiveLen.toLocaleString();
+    let maxLen = CypherBunk.KEY_LEN_MAX;
+    scoreRunningTotal += rtn.scoreLen;
+    _g.debug("Score Running Total: " + scoreRunningTotal, 2);
+
+    //CALC Key Diversity
+    let desiredNum = 1000;
+    let totalKeyVariants = 0;
+    for (let i=0; i < CypherBunk.CHARS_B64.length; ++i) {
+      let c = CypherBunk.CHARS_B64.charAt(i);
+      let tempVariants = this.hashEnc.get(c).length;
+      if (tempVariants > desiredNum)
+        tempVariants = desiredNum; //No Extra Credit (will throw off average)
+      totalKeyVariants += tempVariants;
+    }
+    rtn.avgKeyVariants = (totalKeyVariants / CypherBunk.CHARS_B64.length);
+    rtn.variantScore = rtn.avgKeyVariants / desiredNum;
+    scoreRunningTotal += rtn.variantScore;
+    _g.debug("Score Running Total: " + scoreRunningTotal, 2);
+
+    //CALC Message Homogeneity Simple
+    let highDigit = 0; //Set low to be overwritten
+    let highPercent = 0;
+    let lowDigit = 100; //Set high to be overwritten
+    let lowPercent = 100;
+    let digitCounts = []; //Count how many times 0 was used, then 1, then 2, etc...
+    let totalCount = 0;
+    for (let i=0; i < 10; ++i) {
+      let tempCount = this.message.split(i.toString()).length - 1;
+      digitCounts[i] = tempCount;
+      totalCount += tempCount;
+    }
+    _g.debug(digitCounts, 1, "Digit Homogeneity Counts");
+    let avgCount = totalCount / 10;
+    let deviationTotal = 0;
+    for (let i=0; i < 10; ++i) {
+      let tempDeviation = digitCounts[i] / avgCount;
+      _g.debug("DeviationSimple: " + digitCounts[i] + " / " + avgCount + " = " + tempDeviation, 2);
+      if (tempDeviation > highPercent) {
+        highPercent = tempDeviation;
+        highDigit = i;
+      }
+      if (tempDeviation < lowPercent) {
+        lowPercent = tempDeviation;
+        lowDigit = i;
+      }
+      //Get % Diff from expected, not % OF expected, so 120%=>20% and 10%=>90%
+      tempDeviation = Math.abs(tempDeviation - 1);
+      deviationTotal += tempDeviation;
+    }
+    let avgDeviation = deviationTotal / 10;
+    rtn.deviationScore = 1 - avgDeviation;
+    _g.debug("Avg Deviation Simple: 1 - (" + deviationTotal + " / 10) = " + rtn.deviationScore, 2);
+    rtn.percentRange = Math.abs(highPercent - 1) + Math.abs(lowPercent - 1);
+    rtn.scaleRange = _g.round(digitCounts[highDigit] / digitCounts[lowDigit], 2)
+      + 'x as many ' + highDigit + 's as ' + lowDigit + 's';
+    scoreRunningTotal += rtn.deviationScore;
+    _g.debug("Score Running Total: " + scoreRunningTotal, 2);
+
+    //CALC Message Homogeneity Complex
+    let highKey = "";
+    let lowKey = "";
+    let numTallyKeys = Object.keys(this.tallyEnc).length;
+    let avgUsage = this.tallyTotal / numTallyKeys;
+    _g.debug(this.tallyTotal + " / " + numTallyKeys + " = " + avgUsage, 2, "Complex Homogeneity");
+    deviationTotal = 0;
+    highPercent = 0; //Set low to be overwritten
+    lowPercent = 100; //Set high to be overwritten
+    for (let tallyKey in this.tallyEnc) {
+      let tempUsage = this.tallyEnc[tallyKey];
+      let tempDeviation = tempUsage / avgUsage;
+      _g.debug("DeviationComplex: " + tempUsage + " / " + avgUsage + " = " + tempDeviation, 2);
+      if (tempDeviation > highPercent) {
+        highPercent = tempDeviation;
+        highKey = tallyKey;
+      }
+      if (tempDeviation < lowPercent) {
+        lowPercent = tempDeviation;
+        lowKey = tallyKey;
+      }
+      //Get % Diff from expected, not % OF expected, so 120%=>20% and 10%=>90%
+      tempDeviation = Math.abs(tempDeviation - 1);
+      deviationTotal += tempDeviation;
+    }
+    avgDeviation = deviationTotal / numTallyKeys;
+    rtn.complexDeviationScore = 1 - avgDeviation;
+    _g.debug("Avg Deviation Complex: 1 - (" + deviationTotal + " / 10) = " + rtn.complexDeviationScore, 2);
+    rtn.complexPercentRange = Math.abs(highPercent - 1) + Math.abs(lowPercent - 1);
+    _g.debug('High: ' + highPercent + '% for ' + highKey, 2);
+    _g.debug(' Low: ' + lowPercent + '% for ' + lowKey, 2);
+    rtn.complexScaleRange = _g.round(highPercent + (1 - lowPercent), 2)
+      + 'x of most common';
+
+    scoreRunningTotal += rtn.complexDeviationScore;
+    _g.debug("Score Running Total: " + scoreRunningTotal, 2);
+
+    //Overall Score
+    rtn.overallScore = scoreRunningTotal / scoreNumCategories;
+    return rtn;
+  }
+
+
+  /**
+  * Uses a static Cypher Key to decrypt the message
+  * @param cypherText: the encrypted String to decrypt
+  * @param key: the String to use as the Cypher Key (longer & diverse is better)
+  */
+  decrypt(cypherText, key) {
+    // Hash the New Key for use
+    if (key != this.key)
+      this.keyHash(key);
+    // Remove Non-Numerics (letters can be added for obfuscation)
+    if (cypherText.match(/[^0-9]/g))
+      cypherText = cypherText.replace(/[^0-9]/g, "");
+    let mod = cypherText.length % CypherBunk.CYPHER_CHUNK;
+    if (mod != 0) {
+      // Incorrect length: Remove final corrupt character & attempt decrypt
+      cypherText = cypherText.substring(0, cypherText.length - mod);
+    }
+    // Chunk and Decrypt (we always encrypt into exact chunk lengths)
+    let b64 = '';
+    let numChunks = cypherText.length / CypherBunk.CYPHER_CHUNK;
+    for(let i=0; i < numChunks; i++) {
+      let n = cypherText.substr(i * CypherBunk.CYPHER_CHUNK, CypherBunk.CYPHER_CHUNK);
+      n = parseInt(n) % this.hashDec.size; //Decode Mod Equivalent Indices
+      b64 = b64.concat(this.hashDec.get(n));
+    }
+    return CypherBunk.b64DecodeUnicode(b64);
+  }
+  /**
+   * Decrypts a message with a URL Cypher Key & delivers the data to a callback
+   * Delivered message looks like this:
+   *   {error:false, message:"", clearText="1234567890"}
+   *   {error:true, message:"Failed to fetch...", clearText=null}
+   * @param cypherText: the encrypted String to decrypt
+   * @param urlKey: a resource to fetch as the key
+   * @param callback: where to deliver the encrypted text to
+   */
+  async decryptWithURL(cypherText, urlKey, callback){
+    // Only fetch the URL if it is a new one
+    if (this.keyUrl == urlKey) {
+      _g.debug2('Decrypt Reusing Cached cypherKey URL: ' + urlKey);
+      let clearText = this.decrypt(cypherText, this.key);
+      let rtn = { error:false, message:'Used Cached URL Key', clearText:clearText };
+      callback(rtn);
+    } else {
+      _g.debug2('Decrypt Fetching cypherKey URL: ' + urlKey);
+      try { // Fetch URL. Use Payload as Cypher Key
+        let data = await fetch(urlKey);
+        let payload = await data.text();
+        this.keyUrl = urlKey;
+        _g.debug3(payload);
+        let clearText = this.decrypt(cypherText, payload);
+        let rtn = { error:false, message:'', clearText:clearText };
+        callback(rtn);
+      } catch(error) {
+        let msg = "Failed to fetch Decryption Key @ " + urlKey;
+        _g.debug0(msg);
+        _g.debug2(error);
+        let rtn = { error:true, message:msg, clearText:null };
+        callback(rtn);
+      }
+    }
+  }
+
+
+  /**
+  * Uses a static Cypher Key to encrypt the message
+  * @param clearText: the String to encrypt
+  * @param key: the String to use as the Cypher Key (longer & diverse is better)
+  */
+  encrypt(clearText, key) {
+    let rtn = "";
+    // Hash the New Key for use
+    if (key != this.key)
+      this.keyHash(key);
+    // Base 64 Encode to handle Unicode well (also helps with CypherText Homogeneity)
+    let b64Text = CypherBunk.b64EncodeUnicode(clearText);
+    for(let i=0; i < b64Text.length; ++i) {
+      let c = b64Text.charAt(i);
+      let cypherOpts = this.hashEnc.get(c);
+      let cypherChar = cypherOpts[_g.randRange(cypherOpts.length - 1)];
+      // Make key WITHOUT formatted Mod Equivalents
+      let tallyKey = c + "_" + cypherChar;
+      cypherChar = this.formatCypherChar(cypherChar);
+      // Count used keys here to make Score Calculation MUCH easier
+      if (!(tallyKey in this.tallyEnc))
+        this.tallyEnc[tallyKey] = 0;
+      this.tallyEnc[tallyKey]++;
+      this.tallyTotal++;
+      // Force String Concat, even though cypherChar is always numeric
+      rtn = rtn.concat(cypherChar);
+    }
+    this.message = rtn; //Save for calculateScore()
+    return rtn;
+  }
+  /**
+   * Encrypts a message with a URL Cypher Key & delivers the data to a callback
+   * Delivered message looks like this:
+   *   {error:false, message:"", cypherText="1234567890"}
+   *   {error:true, message:"Failed to fetch...", cypherText=null}
+   * @param clearText: the text to encrypt
+   * @param urlKey: a resource to fetch as the key
+   * @param callback: where to deliver the encrypted text to
+   */
+  async encryptWithURL(clearText, urlKey, callback){
+    // Only fetch the URL if it is a new one
+    if (this.keyUrl == urlKey) {
+      _g.debug2('Encrypt Reusing Cached cypherKey URL: ' + urlKey);
+      let cypherText = this.encrypt(clearText, this.key);
+      let csvText = CypherCSV.toCSV(cypherText);
+      let rtn = { error:false, message:'Used Cached URL Key', cypherText:cypherText, csvText:csvText };
+      callback(rtn);
+    } else {
+      _g.debug2('Encrypt Fetching cypherKey URL: ' + urlKey);
+      try { // Fetch URL. Use Payload as Cypher Key
+        let data = await fetch(urlKey);
+        let payload = await data.text();
+        this.keyUrl = urlKey;
+        _g.debug3(payload);
+        let cypherText = this.encrypt(clearText, payload);
+        let csvText = CypherCSV.toCSV(cypherText);
+        let rtn = { error:false, message:'', cypherText:cypherText, csvText:csvText };
+        callback(rtn);
+      } catch(error) {
+        let msg = "Failed to fetch Encryption Key @ " + urlKey;
+        _g.debug0(msg);
+        _g.debug2(error);
+        let rtn = { error:true, message:msg, cypherText:null, csvText:null };
+        callback(rtn);
+      }
+    }
+  }
+
+
+  /***** Turns the Index into a Modulus Equivalent with Zero Padding *****/
+  formatCypherChar(n){ //n must be a positive integer
+    let keyLen = this.hashDec.size;
+    let maxMultiple = Math.floor(CypherBunk.CYPHER_MAX / keyLen);
+    let randMultiple = _g.randRange(maxMultiple - 1);
+    n = keyLen * randMultiple + n; //Modulus equivalent index
+    //Zero Padding
+    n = "0000000000" + n.toString();
+    return n.substr(n.length - CypherBunk.CYPHER_CHUNK);
+  }
+
+
+  /**
+   * Take a CypherKey and hash it into a Map
+   * (Ignore if Precompute already exists from cb_key.js)
+   */
+  keyHash(key){ //Generates hashEnc and hashDec
+    if (this.precomputed)
+      return; //Skip if Hashes are Pre-Computed
+
+    this.key = key;
+    // Reset Variables
+    this.hashDec.clear();
+    this.hashEnc.clear();
+    this.precomputedJS = '';
+    this.precomputedWarning = null;
+    this.tallyEnc = {};
+    this.tallyTotal = 0;
+    // Ensure Key isn't too big
+    if (this.key.length > CypherBunk.KEY_LEN_MAX)
+      this.key = this.key.substring(0, CypherBunk.KEY_LEN_MAX);
+    _g.debug1('B64 Encoding key');
+    this.key64 = CypherBunk.b64EncodeUnicode(this.key);
+    // Ensure Key has ALL required characters for Base64 (minus padding)
+    let numAdded = 0;
+    let missingChars = "";
+    for (let i=0; i < CypherBunk.CHARS_B64.length; ++i) {
+      let c = CypherBunk.CHARS_B64.charAt(i);
+      if (-1 == this.key64.indexOf(c)) { //If it doesn't have that B64 char
+        missingChars = missingChars.concat(c);
+        numAdded++;
+      }
+    }
+    if (numAdded > 0) {
+      // Add to front and back so each Char has at least 2 cypher indices
+      this.key64 = missingChars + this.key64 + missingChars;
+      let s = (numAdded > 1 ? "s" : "");
+      this.precomputedWarning = "Your key wasn't complicated enough, "
+        + "so we had to add " + numAdded + " character" + s
+        + " to your key.<br/>"
+        + "It will work fine, but each added character reduces "
+        + "the security of your encryption.<br/>"
+        + "Consider using a longer and more complicated Cypher Key.";
+      _g.debug0(this.precomputedWarning);
+    }
+    // Compute Hashes
+    let js = "var predefinedDecHash = new Map();\nvar predefinedEncHash = new Map();\n";
+    for (let i=0; i < this.key64.length; ++i) {
+      let c = this.key64.charAt(i);
+      this.b64CharCount[c]++;
+      this.hashDec.set(i,c);
+      js += "\npredefinedDecHash.set(" + i + ", \"" + c + "\");";
+      let tempArray = [];
+      if (this.hashEnc.has(c))
+        tempArray = this.hashEnc.get(c);
+      tempArray.push(i);
+      this.hashEnc.set(c, tempArray);
+    }
+    // Generate Static JS Keys (for Display in UI)
+    js += "\n";
+    for (let i=0; i < CypherBunk.CHARS_B64.length; ++i) {
+      let c = CypherBunk.CHARS_B64.charAt(i);
+      let tempArray = this.hashEnc.get(c);
+      tempArray = JSON.stringify(tempArray);
+      js += "\npredefinedEncHash.set(\"" + c + "\", " + tempArray + ");";
+    }
+    this.precomputedJS = js;
+  }
+}
+
+
+
+/********** Class: CypherBunkUI **********/
+/**
+ * Cypher Bunk UI is an example for how to make a page use the CypherBunk
+ * utility.  It can be used to run Cypher Bunk as a stand-alone app, rather
+ * than using it as a utility in another JS project.
+ * This JS assumes that it has been included on the standard CypherBunk
+ * index.html. As such, it assumes several DOM elements exist for it to
+ * populate.
+ *
+ * DEPENDENCY:
+ *   Class: CypherBunk
+ *   Class: CypherCSV
+ */
+
+
+/********** CLASS DEFINITION **********/
+class CypherBunkUI {
+  static DOM_IDS = [ //HTML Element IDs We need to manipulate
+    'csv','cypherKey','d1','d2','d3','d4'
+    ,'message','precomputeWrap','predefinedJS'
+    ,'s1','s2','s3','s4','score_total','version','warning'];
+  static TEST_MSG = "Only A Test: Hello World!";
+  static TEST_URL = "https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js";
+  static TEST_URL_BROKEN = "https://ajax.googleapis.com/BROKEN";
+
+
+  /********** FUNCTIONS **********/
+  /** Caches the DOM, and sets up the cypherbunk object */
+  static init(){
+    let testOnly = false; //true to run a simple test, log to console, and quit
+
+    //Cache DOM Elements in _g.dom
+    for (let id of CypherBunkUI.DOM_IDS)
+      _g.dom[id] = document.getElementById(id);
+    _g.dom.version.innerHTML = "version " + CypherBunk.VERSION;
+
+    //Instantiate our CB Object
+    _g.cypherbunk = new CypherBunk(_g.DEBUG_LEVEL);
+
+    //Make Close Icons for Popup Cards
+    let cards = document.querySelectorAll(".card");
+    for(let i=0; i < cards.length; ++i) {
+      let closer = document.createElement("span");
+      closer.className = "cardClose";
+      closer.innerHTML = "&times;";
+      closer.onclick = function(){ CypherBunkUI.cardCloseAll(); };
+      cards[i].prepend(closer);
+    }
+
+    //Look for Pre-Computed Hashes
+    if (typeof predefinedDecHash !== 'undefined' && predefinedEncHash !== 'undefined') {
+      //Make it obvious to user that we are pre-computing
+      for(let keyWrap of document.querySelectorAll(".keyWrap"))
+        keyWrap.classList.add('invisible');
+      _g.dom.precomputeWrap.classList.remove('invisible');
+    }
+
+    //Default Message to one of our ASCII Logo
+    if (typeof _g.ASCII_LOGOS !== 'undefined')
+      _g.dom.message.value = CypherBunk.b64DecodeUnicode(_g.ASCII_LOGOS[_g.randRange(_g.ASCII_LOGOS.length - 1)]);
+
+    //Default Cypher Key as Example
+    _g.dom.cypherKey.value = CypherBunkUI.TEST_URL;
+
+    if (testOnly) {
+      CypherBunkUI.testStaticKey();
+      CypherBunkUI.testUrlKey();
+    }
+
+    if (_g.DEBUG_LEVEL >= 3)
+      CypherCSV.format_TEST_ALL();
+  }
+
+
+  /** Hide All Cards */
+  static cardCloseAll() {
+    let cards = document.querySelectorAll(".card");
+    for(let i=0; i < cards.length; ++i) {
+      cards[i].classList.add("invisible");
+    }
+  }
+  /** Shows the specified Card */
+  static cardShow(id) {
+    CypherBunkUI.cardCloseAll();
+    let card = document.getElementById(id);
+    card.classList.remove("invisible");
+  }
+
+
+  /** Decrypt the text in #message */
+  static decryptMessage(){
+    _g.undoText = _g.dom.message.value; //Back up the message for Undo
+    CypherBunkUI.clearWarning();
+    if (CypherBunkUI.keyIsURL()) { // Fetch URL Payload as Cypher Key
+      _g.cypherbunk.decryptWithURL(_g.dom.message.value, _g.dom.cypherKey.value, CypherBunkUI.decryptMessageFinalize);
+    } else { // Use clear-text cypher key
+      let clearText = _g.cypherbunk.decrypt(_g.dom.message.value, _g.dom.cypherKey.value);
+      let decObj = {error:false, message:"", clearText:clearText};
+      CypherBunkUI.decryptMessageFinalize(decObj);
+    }
+  }
+  /** Finishes the Decrypt Process and Displays (can be used as Callback) */
+  static decryptMessageFinalize(data){
+    if (data.error) {
+      CypherBunkUI.showWarning(data.message);
+    } else {
+      _g.dom.message.value = data.clearText;
+    }
+  }
+
+
+  /** Encrypt the text in #message */
+  static encryptMessage(){
+    _g.undoText = _g.dom.message.value; //Back up the message for Undo
+    CypherBunkUI.clearWarning();
+    if (CypherBunkUI.keyIsURL()) { // Fetch URL Payload as Cypher Key
+      _g.cypherbunk.encryptWithURL(_g.dom.message.value, _g.dom.cypherKey.value, CypherBunkUI.encryptMessageFinalize);
+    } else { // Use clear-text cypher key
+      let cypherText = _g.cypherbunk.encrypt(_g.dom.message.value, _g.dom.cypherKey.value);
+      let csvText = CypherCSV.toCSV(cypherText);
+      let encObj = {error:false, message:"", cypherText:cypherText, csvText:csvText };
+      CypherBunkUI.encryptMessageFinalize(encObj);
+    }
+  }
+  /** Finishes the Encrypt Process and Displays (can be used as Callback) */
+  static encryptMessageFinalize(data){
+    if (data.error) {
+      CypherBunkUI.showWarning(data.message);
+    } else {
+      _g.dom.csv.value = data.csvText;
+      _g.dom.message.value = CypherBunk.TAG_MESSAGE + "\n" + data.cypherText;
+      _g.dom.predefinedJS.value = _g.cypherbunk.precomputedJS; //Save for display in the JS card
+    }
+  }
+
+
+  /***** Formats a score from a 0-based percent to a 100-based percent *****/
+  static formatScore(n, precision = 2, cap100 = true){
+    n *= 100;
+    n = n.toFixed(precision);
+    if (n > 100 && cap100)
+      n = 100;
+    else if (n < 0)
+      n = 0; //Should only happen with bad function param
+    return n + "%";
+  }
+
+
+  /***** True if the #cypherKey is a URL, false otherwise *****/
+  static keyIsURL() {
+    let prefix = _g.dom.cypherKey.value.substr(0,7).toLowerCase();
+    if ('http://' == prefix || 'https:/' == prefix)
+      return true;
+    return false;
+  }
+
+
+  /***** Display the Score for the latest Encryption *****/
+  static scoreShow(){
+    CypherBunkUI.cardShow('scoreCard');
+    let loadMsg = "Calculating...";
+    _g.dom.score_total.innerHTML = "Calculating Overall Score...";
+    _g.dom.s1.innerHTML = _g.dom.s2.innerHTML = _g.dom.s3.innerHTML = loadMsg;
+    _g.dom.d1.innerHTML = _g.dom.d2.innerHTML = _g.dom.d3.innerHTML = "";
+
+    let score = _g.cypherbunk.calculateScore();
+    if (score.error) {
+      CypherBunkUI.cardCloseAll();
+      CypherBunkUI.showWarning(score.message)
+      return;
+    }
+
+    _g.debug("Debug Score:");
+    _g.debug(score);
+    _g.dom.s1.innerHTML = CypherBunkUI.formatScore(score.scoreLen);
+    _g.dom.d1.innerHTML = "Effective length: " + score.userLen;
+    _g.dom.s2.innerHTML = CypherBunkUI.formatScore(score.variantScore);
+    _g.dom.d2.innerHTML = "Average variants: " + Math.round(score.avgKeyVariants);
+    _g.dom.s3.innerHTML = CypherBunkUI.formatScore(score.deviationScore);
+    _g.dom.d3.innerHTML = "Heterogeny range: " + CypherBunkUI.formatScore(score.percentRange, 2, false)
+      + '<br/>(' + score.scaleRange + ')';
+    _g.dom.s4.innerHTML = CypherBunkUI.formatScore(score.complexDeviationScore);
+    _g.dom.d4.innerHTML = "Heterogeny range: " + CypherBunkUI.formatScore(score.complexPercentRange, 2, false)
+      + '<br/>(' + score.complexScaleRange + ')';
+
+    _g.dom.score_total.innerHTML = "Overall Score: " + CypherBunkUI.formatScore(score.overallScore);
+  }
+
+
+  /***** Displays/Hides a warning in the DOM *****/
+  static showWarning(txt){ _g.dom.warning.innerHTML = txt + "<br/><br/>"; }
+  static clearWarning(){ _g.dom.warning.innerHTML = ""; }
+
+
+  /***** Turns Dark UI on/off *****/
+  static toggleDarkUI() {
+    let html = document.body.parentNode;
+    if (html.className == "dark")
+      html.className = "";
+    else
+      html.className = "dark";
+  }
+
+
+  /***** Undoes the very last Encrypt/Decrypt *****/
+  static undo() {
+    let newUndoText = _g.dom.message.value;
+    _g.dom.message.value = _g.undoText;
+    _g.undoText = newUndoText;
+  }
+
+
+
+  /******************** TEST FUNCTIONS ********************/
+  // Tests Encryption/Decryption with a Static Cypher Key
+  static testStaticKey() {
+    let tempKey = "Some Key";
+    let temp = _g.cypherbunk.encrypt(CypherBunkUI.TEST_MSG, tempKey);
+    _g.debug2("=========================");
+    _g.debug2("Synchronous Encrypt:");
+    _g.debug2(temp);
+    temp = _g.cypherbunk.decrypt(temp, tempKey);
+    _g.debug2("Synchronous Decrypt:");
+    _g.debug2(temp);
+    _g.debug2("=========================");
+  }
+
+  // Tests Encryption/Decryption with a URL Cypher Key & callbacks
+  static testUrlKey() {
+    _g.debug2("TEST: testUrlKey()");
+    let urlKey = CypherBunkUI.TEST_URL;
+    _g.cypherbunk.encryptWithURL(CypherBunkUI.TEST_MSG, urlKey, CypherBunkUI.testUrlEncryptCallback);
+    _g.debug2("Asynchronous Encrypt:");
+  }
+  static testUrlEncryptCallback(x){
+    _g.debug2("TEST: testUrlEncryptedCallback()");
+    let urlKey = CypherBunkUI.TEST_URL;
+    if (x.error) {
+      _g.debug0('ERROR_01: ' + x.message);
+    } else {
+      _g.debug2(x.cypherText);
+      _g.cypherbunk.decryptWithURL(x.cypherText, urlKey, CypherBunkUI.testUrlDecryptCallback);
+    }
+  }
+  static testUrlDecryptCallback(x){
+    _g.debug2("TEST: testUrlDecryptedCallback()");
+    _g.debug2("Asynchronous Decrypt:");
+    if (x.error)
+      _g.debug0('ERROR_02: ' + x.message);
+    else
+      _g.debug2(x.clearText);
+  }
+}
+  </script>
 </head>
+
+
 
 <!-- ****************************** BODY ******************************** -->
 <body onload="CypherBunkUI.init()">
@@ -42,107 +1860,147 @@
       <div id="warning"></div>
     </div>
 
-    <div id="helpWrap">
-      <img id="iconScore" onclick="CypherBunkUI.scoreShow()" class="icon" src="icon_score.svg" title="Calculate security score for a message you just encrypted." />
-      <img id="iconKey" onclick="CypherBunkUI.cardShow('jsCard')" class="icon" src="icon_key.svg" title="Get static Javascript keys for more better performance." />
-      <img id="iconSun" onclick="CypherBunkUI.toggleDarkUI()" class="icon" src="icon_sun.svg" title="Toggle Dark Mode" />
-      <img id="iconHelp" onclick="CypherBunkUI.cardShow('helpCard')" class="icon" src="icon_help.svg" title="Show Help Documentation" />
-    </div>
-
-    <div id="keyWrap">
-      Cypher Key Url: <input id="keyUrl" />
-      &nbsp;&nbsp;&nbsp;&nbsp;-or-&nbsp;&nbsp;&nbsp;
-      Full Key Text: <textarea id="keyText"></textarea><br/>
-      (Your friends need the exact same key to decrypt)
-    <hr/>
+    <div id="topBar">
+      <div class="keyWrap"><br/>Cypher<br/>Key:</div>
+      <div class="keyWrap"><textarea id="cypherKey"></textarea></div>
+      <div class="keyWrap whisper">
+        Best: Versioned URL<br/>
+        Good: Entire Book's Text<br/>
+        Insecure: Simple Password<br/>
+        (Friends need exact same key to decrypt)
+      </div>
+      <div id="precomputeWrap" class="invisible">
+        Using Predefined Encryption Key.<br/>
+        Cypher Key Input Fields Hidden.
+      </div>
+      <div id="helpWrap">
+        <svg id="svg_score" onclick="CypherBunkUI.scoreShow()" class="icon" width="35" height="35" viewBox="0 0 113 100">
+          <title>Calculate security score for a message you just encrypted.</title>
+          <path id="path_score" fill="currentColor"
+            d="M50.6 3.5L37.9 29.3 9.4 33.5c-5.1 0.7-7.2 7.1-3.5 10.7l20.6 20.1-4.9 28.4c-0.9 5.1 4.5 9 9.1 6.6L56.3 85.9l25.5 13.4c4.6 2.4 9.9-1.5 9.1-6.6l-4.9-28.4 20.6-20.1c3.7-3.6 1.7-9.9-3.5-10.7L74.6 29.3 61.9 3.5C59.6-1.2 52.9-1.2 50.6 3.5z" />
+        </svg>
+        <svg id="svg_help" onclick="CypherBunkUI.cardShow('helpCard')" class="icon" width="32" height="32" viewBox="0 0 512 512">
+          <title>Show Help Documentation</title>
+          <path id="path_help" fill="currentColor"
+            d="M504 256c0 136.997-111.043 248-248 248S8 392.997 8 256C8 119.083 119.043 8 256 8s248 111.083 248 248zM262.655 90c-54.497 0-89.255 22.957-116.549 63.758-3.536 5.286-2.353 12.415 2.715 16.258l34.699 26.31c5.205 3.947 12.621 3.008 16.665-2.122 17.864-22.658 30.113-35.797 57.303-35.797 20.429 0 45.698 13.148 45.698 32.958 0 14.976-12.363 22.667-32.534 33.976C247.128 238.528 216 254.941 216 296v4c0 6.627 5.373 12 12 12h56c6.627 0 12-5.373 12-12v-1.333c0-28.462 83.186-29.647 83.186-106.667 0-58.002-60.165-102-116.531-102zM256 338c-25.365 0-46 20.635-46 46 0 25.364 20.635 46 46 46s46-20.636 46-46c0-25.365-20.635-46-46-46z" />
+        </svg>
+        <br/>
+        <svg id="svg_key" onclick="CypherBunkUI.cardShow('jsCard')" class="icon" width="32" height="32" viewBox="0 0 512 512">
+          <title>Get static Javascript keys for more better performance.</title>
+          <path id="path_key" fill="currentColor"
+            d="M512 176.001C512 273.203 433.202 352 336 352c-11.22 0-22.19-1.062-32.827-3.069l-24.012 27.014A23.999 23.999 0 0 1 261.223 384H224v40c0 13.255-10.745 24-24 24h-40v40c0 13.255-10.745 24-24 24H24c-13.255 0-24-10.745-24-24v-78.059c0-6.365 2.529-12.47 7.029-16.971l161.802-161.802C163.108 213.814 160 195.271 160 176 160 78.798 238.797.001 335.999 0 433.488-.001 512 78.511 512 176.001zM336 128c0 26.51 21.49 48 48 48s48-21.49 48-48-21.49-48-48-48-48 21.49-48 48z" />
+        </svg>
+        <svg id="svg_sun" onclick="CypherBunkUI.toggleDarkUI()" class="icon" width="32" height="32" viewBox="0 0 512 512">
+          <title>Toggle Dark Mode</title>
+          <path id="path_sun" fill="currentColor"
+            d="M256 160c-52.9 0-96 43.1-96 96s43.1 96 96 96 96-43.1 96-96-43.1-96-96-96zm246.4 80.5l-94.7-47.3 33.5-100.4c4.5-13.6-8.4-26.5-21.9-21.9l-100.4 33.5-47.4-94.8c-6.4-12.8-24.6-12.8-31 0l-47.3 94.7L92.7 70.8c-13.6-4.5-26.5 8.4-21.9 21.9l33.5 100.4-94.7 47.4c-12.8 6.4-12.8 24.6 0 31l94.7 47.3-33.5 100.5c-4.5 13.6 8.4 26.5 21.9 21.9l100.4-33.5 47.3 94.7c6.4 12.8 24.6 12.8 31 0l47.3-94.7 100.4 33.5c13.6 4.5 26.5-8.4 21.9-21.9l-33.5-100.4 94.7-47.3c13-6.5 13-24.7.2-31.1zm-155.9 106c-49.9 49.9-131.1 49.9-181 0-49.9-49.9-49.9-131.1 0-181 49.9-49.9 131.1-49.9 181 0 49.9 49.9 49.9 131.1 0 181z" />
+        </svg>
+      </div>
     </div>
 
     <div id="messageWrap">
       <h2>Message:</h2>
-      Either type a message to encrypt, or paste an encrypted message to decrypt.<br/>
+      <div class="whisper">Either type a message to encrypt, or paste an encrypted message to decrypt.</div>
       <textarea id="message"></textarea>
       <div id="controlWrap">
-        <span id="undoWrap"><img id="iconUndo" onclick="CypherBunkUI.undo()" class="icon" viewBox="0 0 512 512"><title>Undo Last Encrypt/Decrypt Action</title><path fill="currentColor" d="M255.545 8c-66.269.119-126.438 26.233-170.86 68.685L48.971 40.971C33.851 25.851 8 36.559 8 57.941V192c0 13.255 10.745 24 24 24h134.059c21.382 0 32.09-25.851 16.971-40.971l-41.75-41.75c30.864-28.899 70.801-44.907 113.23-45.273 92.398-.798 170.283 73.977 169.484 169.442C423.236 348.009 349.816 424 256 424c-41.127 0-79.997-14.678-110.63-41.556-4.743-4.161-11.906-3.908-16.368.553L89.34 422.659c-4.872 4.872-4.631 12.815.482 17.433C133.798 479.813 192.074 504 256 504c136.966 0 247.999-111.033 248-247.998C504.001 119.193 392.354 7.755 255.545 8z"></path></svg></span>
+        <span id="undoWrap">
+          <svg id="iconUndo" onclick="CypherBunkUI.undo()" class="icon" width="32" height="32" viewBox="0 0 512 512">
+            <title>Undo Last Encrypt/Decrypt Action</title>
+            <path fill="currentColor" d="M255.545 8c-66.269.119-126.438 26.233-170.86 68.685L48.971 40.971C33.851 25.851 8 36.559 8 57.941V192c0 13.255 10.745 24 24 24h134.059c21.382 0 32.09-25.851 16.971-40.971l-41.75-41.75c30.864-28.899 70.801-44.907 113.23-45.273 92.398-.798 170.283 73.977 169.484 169.442C423.236 348.009 349.816 424 256 424c-41.127 0-79.997-14.678-110.63-41.556-4.743-4.161-11.906-3.908-16.368.553L89.34 422.659c-4.872 4.872-4.631 12.815.482 17.433C133.798 479.813 192.074 504 256 504c136.966 0 247.999-111.033 248-247.998C504.001 119.193 392.354 7.755 255.545 8z" />
+          </svg>
+        </span>
         <button id="bEncrypt" onclick="CypherBunkUI.encryptMessage()">Encrypt this Cleartext Message</button>
         <button id="bDecrypt" class="purple" onclick="CypherBunkUI.decryptMessage()">Decrypt this Cyphertext</button>
+      </div>
+    </div>
+
+    <div id="csvWrap">
+      <h2>CSV Spreadsheet Text:</h2>
+      <div class="whisper">Paste the following text in a text editor like Notepad or Wordpad &amp; save as *.csv</div>
+      <textarea id="csv"></textarea>
       </div>
     </div>
   </div>
 
   <div id="footer">
-    <hr/>
     <span id="version"></span>
-    by Rob Bates
+    by <a href="https://www.youtube.com/@CynicPlacebo" target="_blank">Cynic Placebo</a>
   </div>
 
   <div id="jsCard" class="card invisible">
     <h3>Static Javascript Keys</h3>
-    <p>If you're proficient at Javascript, you can download/modify this document to keep pre-computed Cypher Keys. These will perform more quickly, and you can distribute your keys.js to your friends to use the same key.</p>
+    <p>If you're proficient at Javascript, you can download/modify this document to keep pre-computed Cypher Keys. These will perform more quickly, and you can distribute your cb_key.js to your friends to use the same key.</p>
     <p>If there is no JS code below, close this popup and encrypt something in the main window. Then open this popup again.</p>
     <p>(Note: if you are already using Predefined Keys, we won't re-generate them here)</p>
-    <p>Copy the JS code below, put it in a keys.js file, and link to it above this document's &lt;script&gt; tag.</p>
+    <p>Copy the JS code below, put it in a cb_key.js file, and link to it above this document's &lt;script&gt; tag.</p>
     <p><textarea id="predefinedJS"></textarea></p>
   </div>
 
   <div id="helpCard" class="card invisible">
-    <h3>What is CypherBunk?</h3>
-    <p>It offers easy Ad-Hoc encryption for friends.</p>
-    <p>You don't have to have PGP keys or some other setup in advance. You can just encrypt the message and tell them what the key is later.</p>
-
-    <h3>How Secure is CypherBunk?</h3>
-    <p>If you are looking for strong encryption, you are better off exploring AES/DES/RSA/etc...</p>
-    <p>While CypherBunk is weaker, it is much more than a simple 1-to-1 cypher. As long as you use a fairly long key, the encryption is "good enough" for most people. It would take a *LOT* of compute power to be able to crack CypherBunk.</p>
-    <p>The easiest way to "crack" CypherBunk is to guess the key. So don't treat the Key like a password. The best cypher keys are ones you could copy and paste from reliably consistent sources.</p>
-
-    <h3>What Key Should I Use?</h3>
-    <p>Web Pages that don't change often are great keys, which is why we offer a Key URL option. CypherBunk will fetch that Web Page and use its HTML as your key.</p>
-    <p>Linking to eBooks, Dictionaries, Discographies, Glossaries, or other fairly static lists can be a great key.</p>
-    <p>Don't link to Dynamic Web Pages. Even a page that displays the current date would break, because if the key changes by even 1 character, the message can no longer be decrypted with that URL.</p>
-    <p>If you and your friends regularly use a specific Key URL, you may consider using a URL shortening service like bit.ly, because then you just have to remember the short URL, yet you can have a massive key.</p>
-
-    <h3>Troubleshooting:</h3>
-    <p>Can't Fetch Key URL: Some Websites don't allow remote fetching of their content, so you will have to use another site. Libraries like JS or CSS are often good ways around this, because those sites generally WANT you to link to them.</p>
-    <p>Decrypts to Weird Characters: Ensure you've pasted the encrypted message properly (CypherBunk will attempt to remove erroneous characters). More often than not, the Key isn't matching.  If you are using a Key URL, the site may have changed its content. If you are using Full Key Text, you may have copied/pasted differently than the person who encrypted the message. Even 1 character different will break the decryption, so ensure you and your friends have agreed upon the key (including leading/trailing spaces or newlines).</p>
-
-    <h3>Use Case:</h3>
-    <p>Alice wants to send an encrypted message to Bob, but they don't have access to their personal computers, but have access to something with a simple web-browser.</p>
-    <p>Alice accesses this page, types her message, encrypts it with a key that either she and Bob both know, or she could communicate verbally (like a shortened bit.ly link to Lorem Ipsum), and sends the encrypted message to Bob.</p>
-    <p>Bob sees the message that just looks like numbers, understands this is a cypher text, and waits to be told what key to use to decrypt it.</p>
-    <p>Alice tells Bob to go to a bit.ly link for the key.</p>
-    <p>Bob goes to this page, provides the bit.ly link as the decryption key, pastes the encrypted message, and is able to decrypt it successfully.</p>
+    <div>
+      <h3>What is CypherBunk?</h3>
+      <p>It offers easy Ad-Hoc encryption for friends.</p>
+      <p>It uses Symmetric Keys, so you and your friends have to have an agreed upon Cypher Key.</p>
+      <p>You don't have to have PGP keys or some other setup in advance. You can just encrypt the message and tell them what the key is later.</p>
+    </div><div>
+      <h3>Can LocalMESS Decrypt My Message?</h3>
+      <p>Nope. I wrote this entirely in Javascript so that no text is submitted to my server. It only stays in your browser.</p>
+      <p>You'l notice you didn't have to agree to any cookies on my site. That's because I disapprove of tracking people.</p>
+      <p>Still worried? Well, I encourage you to save this page to your computer and do all your encryption offline to be sure. I wrote this page as a SINGLE HTML file (no links to CSS, JS, or even IMG) so that you can download 1 single file, and it will instantly work on your local machine with no internet (unless you use a URL for a Key, then it needs internet to fetch the Key).</p>
+    </div><div>
+      <h3>How Secure is CypherBunk?</h3>
+      <p>If you are looking for strong encryption, you are better off exploring PGP with AES/RSA.</p>
+      <p>While CypherBunk is weaker, it is much more than a simple 1-to-1 cypher. As long as you use a fairly long key, the encryption is "good enough" for most people. It would take a <b>LOT</b> of compute power to be able to crack CypherBunk.</p>
+      <p>The easiest way to "crack" CypherBunk is to guess the key. So don't treat the Key like a password.</p>
+      <p>The best cypher keys are ones you could copy and paste from reliably consistent &amp; lengthy sources (I recommend over 100,000 characters for your Cypher Key).</p>
+    </div><div>
+      <h3>What Key Should I Use?</h3>
+      <p>Web Pages that don't change often make great keys, as we use the HTML on the web page like a giant password.</p>
+      <p>Linking to eBooks, Dictionaries, Discographies, Glossaries, or other fairly static lists can be a great key.</p>
+      <p>Don't link to Dynamic Web Pages. Even a page that displays the current date would break, because if the key changes by even 1 character, the message can no longer be decrypted with that URL.</p>
+      <p>If you and your friends regularly use a specific URL as a Key, you may consider using a URL shortening service like bit.ly, because then you just have to remember the short URL, yet you can have a massive key.</p>
+    </div><div>
+      <h3>How Do I Know if my Cypher Key is Good Enough?</h3>
+      <p>After you encrypt/decrypt something, click on the Star icon at the top right.</p>
+      <p>This will show you your Encryption Score.</p>
+      <p>The higher the score the better, but anything over 50% is decent.</p>
+    </div><div>
+      <h3>How do I Decrypt a Spreadsheet?</h3>
+      <p>If someone sent you a spreadsheet that was encrypted with CypherBunk, you will need to open it with a text editor (Wordpad, Notepad++, VIM, etc).</p>
+      <p>It may look like garbage, but just copy the raw text of the document &amp; paste it in as the "Message."</p>
+      <p>Be sure to set the Cypher Key you and your friends use, and click "Decrypt this Cyphertext."</p>
+    </div><div>
+      <h3>Static Javascript Keys:</h3>
+      <p>After encrypting/decrypting a message, if you click on the Key icon at the top right you can see a pre-computed Static Key.</p>
+      <p>Using such a key will increase performance, but you need to ensure that your machine is physically secure, as you will have effectively copied your symmetric key to your hard drive.</p>
+      <p>These keys can be convenient, as they can be distributed to others to use to decrypt a message.</p>
+    </div><div>
+      <h3>Use Case:</h3>
+      <p>Alice wants to send an encrypted message to Bob, but they don't have access to their personal computers, but have access to something with a simple web-browser.</p>
+      <p>Alice accesses this page, types her message, encrypts it with a key that either she and Bob both know, or she could communicate verbally (like a shortened bit.ly link to Lorem Ipsum), and sends the encrypted message to Bob.</p>
+      <p>Bob sees the message that just looks like numbers, understands this is a cypher text, and waits to be told what key to use to decrypt it.</p>
+      <p>Alice tells Bob to go to a bit.ly link for the key.</p>
+      <p>Bob goes to this page, provides the bit.ly link as the decryption key, pastes the encrypted message, and is able to decrypt it successfully.</p>
+    </div><div>
+      <h3>Troubleshooting:</h3>
+      <p>"Failed to fetch Encryption Key" can mean your URL is invalid or that the Website doesn't allow remote fetching of their content, so you will have to use another site. Libraries like JS or CSS are often good ways around this, because those sites generally WANT you to link to them &amp; they often offer versioned URLs that won't change over time.</p>
+      <p>"ERROR: Invalid Cypher Key" means the key you are decrypting with does NOT match the key the message was encrypted with. CypherBunk is good at trimming out erroneous characters in the Message, but any variation in the CypherKey will cause it to fail. If you are using a URL as a Key, the site may have changed its content. If you are using pasted text as the Key, you may have copied/pasted differently than the person who encrypted the message. Even 1 character different will break the decryption, so ensure you and your friends have agreed upon the key (including leading/trailing spaces or newlines).</p>
+    </div>
   </div>
 
   <div id="scoreCard" class="card invisible">
     <h1 id="score_total"></h1>
-    <hr/><br/>
     <table id="scoreTable"><thead><tr>
       <th>Score Type</th><th>Score</th><th>Detail</th>
-    </tr></thead><tbody><tr>
-      <td title="Longer keys reduce numerical patterns, making the cypher harder to crack.">
-        Key Length
-      </td>
-      <td id="score1" title="Was your key long enough?"></td>
-      <td id="detail1" title="Ideally your key would be 100,000 characters or more."></td>
-    </tr><tr>
-      <td title="A complicated long key will give you better diversity, making the cypher harder to crack.">
-        Key Diversity
-      </td>
-      <td id="score2"></td>
-      <td id="detail2" title="Ideally your key should generate an average of 1,000 variants for every cypher character."></td>
-    </tr><tr>
-      <td title="A perfect encryption would have the same number of 0s as 1s and every other digit, making the cypher harder to crack.">
-        Homogeneity Simple
-      </td>
-      <td id="score3"></td>
-      <td id="detail3" title="Ranges up to 20% are fine (encrypted message should have roughly equivalent numbers of 0s, 1s, 2s, etc...)"></td>
-    </tr><tr>
-      <td title="The cypher creates many tokens representing characters. The best encryption would use each token an equal number of times (this score tends to be low, as it is dependent on the message being sent)">
-        Homogeneity Complex
-      </td>
-      <td id="score4" title="On Average, are cypher characters used relatively uniformly."></td>
-      <td id="detail4" title="Ranges up to 500% are fine (meaning that the most variants are used about 3x average, and the least common about half of average)."></td>
+    </tr></thead><tbody><tr title="Was your key long enough?&#013;Longer keys reduce numerical patterns, making the cypher harder to crack.&#013;Ideally your key would be 500,000 characters or more (for a score of 100%).">
+      <td>Key Length</td><td id="s1"></td><td id="d1"></td>
+    </tr><tr title="A complicated long key will give you better diversity, making the cypher harder to crack.&#013;Ideally your key should generate an average of 1,000 variants for every cypher character (for a score of 100%).">
+      <td>Key Diversity</td><td id="s2"></td><td id="d2"></td>
+    </tr><tr title="A perfect encryption would have the same number of 0s, 1s, 2s, 3s... &amp; 9s.&#013;This makes the cypher harder to crack.&#013;The smaller the Heterogeny Range, the better.">
+      <td>Homogeneity Simple</td><td id="s3"></td><td id="d3"></td>
+    </tr><tr title="Are cypher tokens used relatively uniformly?&#013;(Short messages will score poorly)&#013;Smaller the Heterogeny Range, the better.&#013;But for long keys or messages ranges up to 500% are fine.">
+      <td>Homogeneity Complex</td><td id="s4"></td><td id="d4"></td>
     </tr></tbody></table>
-    <br/><hr/>
     <div id="scoreCaveat">Scores are for only the most recent encryption performed.</div>
   </div>
 </body>
